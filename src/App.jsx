@@ -41,6 +41,7 @@ const T = {
   roleManLabel: "Менежер",
   roleEmpLabel: "Ажилтан",
   attendanceTitle: "Ирц", todayAttendance: "Өнөөдрийн ирц",
+  noLinkedEmployee: "Таны бүртгэлд ажилтны карт холбогдоогүй тул цаг тэмдэглэх боломжгүй. Админд хандана уу.",
   checkIn: "Ирсэн цаг", checkOut: "Явсан цаг", status: "Төлөв",
   clockInBtn: "ЦАГ ТЭМДЭГЛЭХ", clockOutBtn: "ЯВЛАА",
   clockedOutAt: "✓ Явсан цаг:", recordedSuccess: "✓ Амжилттай бүртгэгдлээ!",
@@ -98,9 +99,11 @@ const MOCK_USERS = [
 ];
 
 const MOCK_EMPLOYEES = [
-  { id: 1, name: "Лина Хасан", phone: "+976-9911-2233", email: "lina@store.mn", position: "Кассчин", joined: "2023-03-15", active: true },
-  { id: 2, name: "Ахмед Насер", phone: "+976-9922-3344", email: "ahmed@store.mn", position: "Агуулахын ажилтан", joined: "2022-11-01", active: true },
-  { id: 3, name: "Нур Ибрагим", phone: "+976-9933-4455", email: "nour@store.mn", position: "Борлуулагч", joined: "2024-01-20", active: true },
+  { id: 6, userId: 1, name: "Сараа Болд", phone: "+976-9900-1122", email: "saraa@store.mn", position: "Захирал", joined: "2020-01-15", active: true },
+  { id: 7, userId: 2, name: "Өмөр Халид", phone: "+976-9900-2233", email: "omar@store.mn", position: "Дэлгүүрийн менежер", joined: "2021-02-01", active: true },
+  { id: 1, userId: 3, name: "Лина Хасан", phone: "+976-9911-2233", email: "lina@store.mn", position: "Кассчин", joined: "2023-03-15", active: true },
+  { id: 2, userId: 4, name: "Ахмед Насер", phone: "+976-9922-3344", email: "ahmed@store.mn", position: "Агуулахын ажилтан", joined: "2022-11-01", active: true },
+  { id: 3, userId: 5, name: "Нур Ибрагим", phone: "+976-9933-4455", email: "nour@store.mn", position: "Борлуулагч", joined: "2024-01-20", active: true },
   { id: 4, name: "Халид Сауд", phone: "+976-9944-5566", email: "khalid@store.mn", position: "Ахлагч", joined: "2021-06-10", active: false },
   { id: 5, name: "Реем Отайби", phone: "+976-9955-6677", email: "reem@store.mn", position: "Кассчин", joined: "2023-08-05", active: true },
 ];
@@ -158,6 +161,7 @@ const Icon = ({ name, size = 20, color = "currentColor" }) => {
     user: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
     store: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>,
     alert: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
+    chart: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
     back: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>,
   };
   return icons[name] || null;
@@ -178,6 +182,9 @@ const roleColor = (r) => r === "Director" ? S.director : r === "Manager" ? S.man
 const roleLabel = (r) => T[r] || r;
 const statusColor = (s) => s === "Дууссан" ? S.success : s === "Хийгдэж байна" ? S.accent : s === "Хүлээгдэж байна" ? S.warning : S.textMuted;
 const priorityColor = (p) => p === "Өндөр" ? S.danger : p === "Дунд" ? S.warning : S.textMuted;
+// Local-timezone YYYY-MM-DD (toISOString() would return the UTC date, which is wrong before 08:00 in UTC+8)
+const toLocalDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const toLocalTime = (d) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 
 // ─── SHARED UI ────────────────────────────────────────────────────────────────
 const Badge = ({ label, color }) => (
@@ -287,7 +294,7 @@ const LoginScreen = ({ onLogin, users }) => {
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
 const Dashboard = ({ user, employees, tasks, attendance, notifications, onNavigate }) => {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = toLocalDate(new Date());
   const todayAtt = attendance.filter(a => a.date === today);
   const pendingTasks = tasks.filter(t => t.status !== "Дууссан").length;
   const unread = notifications.filter(n => !n.read).length;
@@ -514,9 +521,9 @@ const EmployeesScreen = ({ employees, setEmployees, user }) => {
 
 // ─── ATTENDANCE ───────────────────────────────────────────────────────────────
 const AttendanceScreen = ({ user, employees, attendance, setAttendance }) => {
-  const now = new Date(); const today = now.toISOString().slice(0, 10); const currentTime = now.toTimeString().slice(0, 5);
+  const now = new Date(); const today = toLocalDate(now); const currentTime = toLocalTime(now);
   const [clocked, setClocked] = useState(false);
-  const emp = employees.find(e => e.name === user.name);
+  const emp = employees.find(e => e.userId === user.id);
   const myRecord = attendance.find(a => emp && a.empId === emp.id && a.date === today);
   const todayAtt = attendance.filter(a => a.date === today);
   const clockInOut = () => {
@@ -534,7 +541,9 @@ const AttendanceScreen = ({ user, employees, attendance, setAttendance }) => {
         </div>
         <div style={{ color: S.text, fontSize: 48, fontWeight: 800, letterSpacing: "-2px", fontVariantNumeric: "tabular-nums" }}>{currentTime}</div>
         <div style={{ marginTop: 20 }}>
-          {!myRecord ? (
+          {!emp ? (
+            <div style={{ color: S.warning, fontSize: 13, fontWeight: 600, padding: "10px 14px", background: S.warningBg, borderRadius: 10 }}>{T.noLinkedEmployee}</div>
+          ) : !myRecord ? (
             <button onClick={clockInOut} style={{ background: "linear-gradient(135deg,#4F8EF7,#7C3AED)", border: "none", borderRadius: 50, width: 88, height: 88, cursor: "pointer", display: "inline-flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, boxShadow: "0 0 30px rgba(79,142,247,0.4)" }}
               onMouseDown={e => e.currentTarget.style.transform = "scale(0.93)"} onMouseUp={e => e.currentTarget.style.transform = "scale(1)"}>
               <Icon name="clock" size={24} color="#fff" /><span style={{ color: "#fff", fontSize: 10, fontWeight: 700 }}>{T.clockInBtn}</span>
@@ -583,7 +592,7 @@ const AttendanceScreen = ({ user, employees, attendance, setAttendance }) => {
 // ─── SCHEDULE ─────────────────────────────────────────────────────────────────
 const ScheduleScreen = ({ employees, shifts, setShifts, user }) => {
   const todayObj = new Date();
-  const today = todayObj.toISOString().slice(0, 10);
+  const today = toLocalDate(todayObj);
 
   const [selDate, setSelDate] = useState(today);
   const [viewMode, setViewMode] = useState("month"); // "month" | "day"
@@ -798,7 +807,7 @@ const ScheduleScreen = ({ employees, shifts, setShifts, user }) => {
           <div style={{ display: "flex", gap: 6, marginBottom: 14, overflowX: "auto", paddingBottom: 4 }}>
             {Array.from({ length: 11 }, (_, i) => {
               const d = new Date(selDate + "T00:00:00"); d.setDate(d.getDate() + i - 5);
-              const ds = d.toISOString().slice(0, 10);
+              const ds = toLocalDate(d);
               const isSel = ds === selDate; const isT = ds === today;
               const hasSh = shifts.some(s => s.date === ds);
               return (
@@ -1321,8 +1330,9 @@ const SettingsScreen = ({ user, users, setUsers, setUser, onLogout }) => {
   );
 };
 // ─── BOTTOM NAV ───────────────────────────────────────────────────────────────
-const BottomNav = ({ active, onNavigate, unreadCount }) => {
-  const tabs = [{ id: "home", icon: "home", label: T.home }, { id: "employees", icon: "users", label: T.team }, { id: "attendance", icon: "clock", label: T.clock }, { id: "tasks", icon: "tasks", label: T.tasks }, { id: "schedule", icon: "calendar", label: T.schedule }];
+const BottomNav = ({ active, onNavigate, unreadCount, user }) => {
+  const canSeeReports = user.role === "Director" || user.role === "Manager";
+  const tabs = [{ id: "home", icon: "home", label: T.home }, { id: "employees", icon: "users", label: T.team }, { id: "attendance", icon: "clock", label: T.clock }, { id: "tasks", icon: "tasks", label: T.tasks }, { id: "schedule", icon: "calendar", label: T.schedule }, ...(canSeeReports ? [{ id: "reports", icon: "chart", label: T.reports }] : [])];
   return (
     <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, background: "rgba(255,255,255,0.97)", backdropFilter: "blur(20px)", borderTop: `1px solid ${S.border}`, boxShadow: "0 -4px 16px rgba(0,0,0,0.07)", padding: "8px 4px 12px", display: "flex", justifyContent: "space-around", zIndex: 100 }}>
       {tabs.map(tab => (
@@ -1390,7 +1400,7 @@ export default function App() {
     <div style={{ background: S.bg, minHeight: "100vh", maxWidth: 430, margin: "0 auto", position: "relative", fontFamily: "'SF Pro Display',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" }}>
       <TopBar screen={screen} notifications={notifications} onNavigate={setScreen} />
       <div style={{ paddingBottom: 80 }}>{screens[screen]}</div>
-      <BottomNav active={screen} onNavigate={setScreen} unreadCount={unreadCount} />
+      <BottomNav active={screen} onNavigate={setScreen} unreadCount={unreadCount} user={user} />
     </div>
   );
 }
