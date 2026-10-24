@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 // ─── MONGOLIAN TRANSLATIONS ───────────────────────────────────────────────────
 const T = {
@@ -10,6 +10,16 @@ const T = {
   enterUsername: "Хэрэглэгчийн нэр оруулна уу",
   enterPassword: "Нууц үг оруулна уу",
   invalidLogin: "Хэрэглэгчийн нэр эсвэл нууц үг буруу байна",
+  inactiveLogin: "Таны бүртгэл идэвхгүй байна. Админд хандана уу.",
+  unassigned: "Хуваарилаагүй",
+  accountSection: "НЭВТРЭХ ЭРХ",
+  usernameLabel: "Нэвтрэх нэр (хоосон бол нэвтрэх эрхгүй)",
+  newPassword: "Нууц үг", newPasswordEdit: "Шинэ нууц үг (хоосон бол өөрчлөхгүй)",
+  usernameTaken: "Энэ нэвтрэх нэр аль хэдийн бүртгэлтэй!",
+  noAccount: "Нэвтрэх эрхгүй",
+  resetPassword: "Нууц үг шинэчлэх",
+  resetDemo: "Демо өгөгдөл сэргээх", resetDemoConfirm: "Бүх өөрчлөлт устаж, анхны демо өгөгдөл сэргээгдэнэ. Үргэлжлүүлэх үү?",
+  dataStoredLocally: "Өгөгдөл энэ төхөөрөмжийн browser-т хадгалагдаж байна.",
   demo: "Туршилт: director/1234 · manager/1234 · emp1/1234",
   Director: "Дээд Админ", Manager: "Менежер", Employee: "Ажилтан",
   home: "Нүүр", team: "Баг", clock: "Цаг", tasks: "Даалгавар",
@@ -41,7 +51,6 @@ const T = {
   roleManLabel: "Менежер",
   roleEmpLabel: "Ажилтан",
   attendanceTitle: "Ирц", todayAttendance: "Өнөөдрийн ирц",
-  noLinkedEmployee: "Таны бүртгэлд ажилтны карт холбогдоогүй тул цаг тэмдэглэх боломжгүй. Админд хандана уу.",
   checkIn: "Ирсэн цаг", checkOut: "Явсан цаг", status: "Төлөв",
   clockInBtn: "ЦАГ ТЭМДЭГЛЭХ", clockOutBtn: "ЯВЛАА",
   clockedOutAt: "✓ Явсан цаг:", recordedSuccess: "✓ Амжилттай бүртгэгдлээ!",
@@ -90,23 +99,18 @@ const T = {
 };
 
 // ─── MOCK DATA ────────────────────────────────────────────────────────────────
-const MOCK_USERS = [
-  { id: 1, username: "director", password: "1234", role: "Director", name: "Сараа Болд" },
-  { id: 2, username: "manager", password: "1234", role: "Manager", name: "Өмөр Халид" },
-  { id: 3, username: "emp1", password: "1234", role: "Employee", name: "Лина Хасан" },
-  { id: 4, username: "emp2", password: "1234", role: "Employee", name: "Ахмед Насер" },
-  { id: 5, username: "emp3", password: "1234", role: "Employee", name: "Нур Ибрагим" },
+// Employees and login accounts are ONE list: an employee with a username can sign in with the given role.
+const MOCK_EMPLOYEES = [
+  { id: 6, name: "Сараа Болд", phone: "+976-9900-1122", email: "saraa@store.mn", position: "Захирал", joined: "2020-01-15", active: true, username: "director", password: "1234", role: "Director" },
+  { id: 7, name: "Өмөр Халид", phone: "+976-9900-2233", email: "omar@store.mn", position: "Дэлгүүрийн менежер", joined: "2021-02-01", active: true, username: "manager", password: "1234", role: "Manager" },
+  { id: 1, name: "Лина Хасан", phone: "+976-9911-2233", email: "lina@store.mn", position: "Кассчин", joined: "2023-03-15", active: true, username: "emp1", password: "1234", role: "Employee" },
+  { id: 2, name: "Ахмед Насер", phone: "+976-9922-3344", email: "ahmed@store.mn", position: "Агуулахын ажилтан", joined: "2022-11-01", active: true, username: "emp2", password: "1234", role: "Employee" },
+  { id: 3, name: "Нур Ибрагим", phone: "+976-9933-4455", email: "nour@store.mn", position: "Борлуулагч", joined: "2024-01-20", active: true, username: "emp3", password: "1234", role: "Employee" },
+  { id: 4, name: "Халид Сауд", phone: "+976-9944-5566", email: "khalid@store.mn", position: "Ахлагч", joined: "2021-06-10", active: false, username: "", password: "", role: "Employee" },
+  { id: 5, name: "Реем Отайби", phone: "+976-9955-6677", email: "reem@store.mn", position: "Кассчин", joined: "2023-08-05", active: true, username: "", password: "", role: "Employee" },
 ];
 
-const MOCK_EMPLOYEES = [
-  { id: 6, userId: 1, name: "Сараа Болд", phone: "+976-9900-1122", email: "saraa@store.mn", position: "Захирал", joined: "2020-01-15", active: true },
-  { id: 7, userId: 2, name: "Өмөр Халид", phone: "+976-9900-2233", email: "omar@store.mn", position: "Дэлгүүрийн менежер", joined: "2021-02-01", active: true },
-  { id: 1, userId: 3, name: "Лина Хасан", phone: "+976-9911-2233", email: "lina@store.mn", position: "Кассчин", joined: "2023-03-15", active: true },
-  { id: 2, userId: 4, name: "Ахмед Насер", phone: "+976-9922-3344", email: "ahmed@store.mn", position: "Агуулахын ажилтан", joined: "2022-11-01", active: true },
-  { id: 3, userId: 5, name: "Нур Ибрагим", phone: "+976-9933-4455", email: "nour@store.mn", position: "Борлуулагч", joined: "2024-01-20", active: true },
-  { id: 4, name: "Халид Сауд", phone: "+976-9944-5566", email: "khalid@store.mn", position: "Ахлагч", joined: "2021-06-10", active: false },
-  { id: 5, name: "Реем Отайби", phone: "+976-9955-6677", email: "reem@store.mn", position: "Кассчин", joined: "2023-08-05", active: true },
-];
+const DEFAULT_SETTINGS = { workStart: "08:00", workEnd: "17:00", overtime: 8, storeName: "Btech Store — Үндсэн салбар" };
 
 const MOCK_ATTENDANCE = [
   { id: 1, empId: 1, date: "2026-04-21", checkIn: "08:02", checkOut: "17:05", status: "Цагтаа" },
@@ -186,6 +190,22 @@ const priorityColor = (p) => p === "Өндөр" ? S.danger : p === "Дунд" ? 
 const toLocalDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const toLocalTime = (d) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 
+// ─── LOCAL PERSISTENCE ────────────────────────────────────────────────────────
+// Bump the version whenever the stored data shape changes so stale data is ignored.
+const STORAGE_PREFIX = "btech:v2:";
+const loadStored = (key, fallback) => {
+  try { const raw = localStorage.getItem(STORAGE_PREFIX + key); return raw === null ? fallback : JSON.parse(raw); }
+  catch { return fallback; }
+};
+const usePersistedState = (key, initial) => {
+  const [value, setValue] = useState(() => loadStored(key, initial));
+  useEffect(() => { try { localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(value)); } catch { /* storage unavailable: keep in-memory only */ } }, [key, value]);
+  return [value, setValue];
+};
+const clearStoredData = () => {
+  try { Object.keys(localStorage).filter(k => k.startsWith(STORAGE_PREFIX)).forEach(k => localStorage.removeItem(k)); } catch { /* ignore */ }
+};
+
 // ─── SHARED UI ────────────────────────────────────────────────────────────────
 const Badge = ({ label, color }) => (
   <span style={{ display: "inline-flex", alignItems: "center", padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, color, background: color + "20", whiteSpace: "nowrap" }}>{label}</span>
@@ -261,9 +281,14 @@ const PBar = ({ value, color = S.accent }) => (
 );
 
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
-const LoginScreen = ({ onLogin, users }) => {
+const LoginScreen = ({ onLogin, employees }) => {
   const [u, setU] = useState(""); const [p, setP] = useState(""); const [err, setErr] = useState(""); const [show, setShow] = useState(false);
-  const login = () => { const user = (users || MOCK_USERS).find(x => x.username === u && x.password === p); user ? onLogin(user) : setErr(T.invalidLogin); };
+  const login = () => {
+    const emp = employees.find(x => x.username && x.username === u.trim() && x.password === p);
+    if (!emp) return setErr(T.invalidLogin);
+    if (!emp.active) return setErr(T.inactiveLogin);
+    onLogin(emp);
+  };
   return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #EEF2FF 0%, #F4F6FA 50%, #E8F4FD 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "32px 24px" }}>
       <div style={{ textAlign: "center", marginBottom: 40, display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -335,7 +360,7 @@ const Dashboard = ({ user, employees, tasks, attendance, notifications, onNaviga
                 <Badge label={task.status} color={statusColor(task.status)} />
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <div style={{ color: S.textMuted, fontSize: 11 }}>👤 {assignee?.name}</div>
+                <div style={{ color: S.textMuted, fontSize: 11 }}>👤 {assignee?.name || T.unassigned}</div>
                 <div style={{ color: S.textMuted, fontSize: 11 }}>📅 {task.deadline}</div>
               </div>
             </Card>
@@ -347,13 +372,17 @@ const Dashboard = ({ user, employees, tasks, attendance, notifications, onNaviga
 };
 
 // ─── EMPLOYEES ────────────────────────────────────────────────────────────────
-const EmployeesScreen = ({ employees, setEmployees, user }) => {
+const EmployeesScreen = ({ employees, setEmployees, user, onDelete }) => {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [showForm, setShowForm] = useState(false);
   const [editEmp, setEditEmp] = useState(null);
   const [confirmDel, setConfirmDel] = useState(null);
-  const [form, setForm] = useState({ name: "", phone: "", email: "", position: "", joined: "", role: "Employee" });
+  const [form, setForm] = useState({ name: "", phone: "", email: "", position: "", joined: "", role: "Employee", username: "", password: "" });
+  const [formErr, setFormErr] = useState("");
+  const [resetTarget, setResetTarget] = useState(null);
+  const [resetPw, setResetPw] = useState("");
+  const [resetMsg, setResetMsg] = useState("");
 
   const isAdmin = user.role === "Director";
   const canEdit = user.role === "Director" || user.role === "Manager";
@@ -363,23 +392,36 @@ const EmployeesScreen = ({ employees, setEmployees, user }) => {
     (filter === "all" || (filter === "active" ? e.active : !e.active))
   );
 
-  const openAdd = () => { setEditEmp(null); setForm({ name: "", phone: "", email: "", position: "", joined: "", role: "Employee" }); setShowForm(true); };
-  const openEdit = (emp) => { setEditEmp(emp); setForm({ name: emp.name, phone: emp.phone, email: emp.email, position: emp.position, joined: emp.joined, role: emp.role || "Employee" }); setShowForm(true); };
+  const openAdd = () => { setEditEmp(null); setForm({ name: "", phone: "", email: "", position: "", joined: "", role: "Employee", username: "", password: "" }); setFormErr(""); setShowForm(true); };
+  const openEdit = (emp) => { setEditEmp(emp); setForm({ name: emp.name, phone: emp.phone, email: emp.email, position: emp.position, joined: emp.joined, role: emp.role || "Employee", username: emp.username || "", password: "" }); setFormErr(""); setShowForm(true); };
 
   const saveEmployee = () => {
     if (!form.name) return;
+    const username = form.username.trim();
+    if (username && employees.some(e => e.username === username && e.id !== editEmp?.id)) { setFormErr(T.usernameTaken); return; }
+    const { password, ...rest } = form;
+    const base = { ...rest, username };
+    // Managers cannot grant roles or logins; only Director edits account fields.
+    if (!isAdmin) { delete base.role; delete base.username; }
     if (editEmp) {
-      setEmployees(prev => prev.map(e => e.id === editEmp.id ? { ...e, ...form } : e));
+      setEmployees(prev => prev.map(e => e.id === editEmp.id ? { ...e, ...base, ...(isAdmin && password ? { password } : {}) } : e));
     } else {
-      setEmployees(prev => [...prev, { ...form, id: Date.now(), active: true }]);
+      setEmployees(prev => [...prev, { ...base, role: base.role || "Employee", password: isAdmin ? password : "", id: Date.now(), active: true }]);
     }
-    setForm({ name: "", phone: "", email: "", position: "", joined: "", role: "Employee" });
-    setShowForm(false); setEditEmp(null);
+    setForm({ name: "", phone: "", email: "", position: "", joined: "", role: "Employee", username: "", password: "" });
+    setShowForm(false); setEditEmp(null); setFormErr("");
   };
 
-  const deleteEmployee = (id) => { setEmployees(prev => prev.filter(e => e.id !== id)); setConfirmDel(null); };
+  const deleteEmployee = (id) => { onDelete(id); setConfirmDel(null); };
   const toggleActive = id => setEmployees(prev => prev.map(e => e.id === id ? { ...e, active: !e.active } : e));
-  const changeRole = (id, role) => setEmployees(prev => prev.map(e => e.id === id ? { ...e, role } : e));
+  const changeRole = (id, role) => { if (id === user.id) return; setEmployees(prev => prev.map(e => e.id === id ? { ...e, role } : e)); };
+  const openReset = (emp) => { setResetTarget(emp); setResetPw(""); setResetMsg(""); };
+  const doReset = () => {
+    if (resetPw.length < 4) { setResetMsg("Хамгийн багадаа 4 тэмдэгт оруулна уу"); return; }
+    setEmployees(prev => prev.map(e => e.id === resetTarget.id ? { ...e, password: resetPw } : e));
+    setResetMsg("✓ Нууц үг шинэчлэгдлээ!");
+    setTimeout(() => { setResetTarget(null); setResetMsg(""); }, 1500);
+  };
 
   const empRoleColor = (r) => r === "Director" ? S.director : r === "Manager" ? S.manager : S.employee;
   const empRoleLabel = (r) => r === "Director" ? "Дээд Админ" : r === "Manager" ? "Менежер" : "Ажилтан";
@@ -407,9 +449,15 @@ const EmployeesScreen = ({ employees, setEmployees, user }) => {
           <Inp label={T.position} value={form.position} onChange={v => setForm(f => ({ ...f, position: v }))} />
           <Inp label={T.dateOfJoining} type="date" value={form.joined} onChange={v => setForm(f => ({ ...f, joined: v }))} />
           {isAdmin && (
-            <Sel label="Эрх / Үүрэг" value={form.role} onChange={v => setForm(f => ({ ...f, role: v }))}
-              options={[{ value: "Employee", label: "👤 Ажилтан" }, { value: "Manager", label: "👔 Менежер" }, { value: "Director", label: "★ Дээд Админ" }]} />
+            <div style={{ borderTop: `1px solid ${S.border}`, paddingTop: 12, marginBottom: 4 }}>
+              <div style={{ color: S.textMuted, fontSize: 10, fontWeight: 600, letterSpacing: "0.06em", marginBottom: 10 }}>{T.accountSection}</div>
+              <Inp label={T.usernameLabel} value={form.username} onChange={v => setForm(f => ({ ...f, username: v }))} placeholder="жишээ: user1" />
+              <Inp label={editEmp ? T.newPasswordEdit : T.newPassword} value={form.password} onChange={v => setForm(f => ({ ...f, password: v }))} placeholder={editEmp ? "" : "Анхны нууц үг"} />
+              <Sel label="Эрх / Үүрэг" value={form.role} onChange={v => setForm(f => ({ ...f, role: v }))}
+                options={[{ value: "Employee", label: "👤 Ажилтан" }, { value: "Manager", label: "👔 Менежер" }, { value: "Director", label: "★ Дээд Админ" }]} />
+            </div>
           )}
+          {formErr && <div style={{ color: S.danger, fontSize: 12, marginBottom: 10, padding: "8px 12px", background: S.dangerBg, borderRadius: 8 }}>{formErr}</div>}
           <div style={{ display: "flex", gap: 8 }}>
             <Btn full onClick={saveEmployee}>{editEmp ? T.save : T.saveEmployee}</Btn>
             <Btn variant="secondary" onClick={() => { setShowForm(false); setEditEmp(null); }}>{T.cancel}</Btn>
@@ -427,6 +475,22 @@ const EmployeesScreen = ({ employees, setEmployees, user }) => {
             <div style={{ display: "flex", gap: 10 }}>
               <Btn full variant="danger" onClick={() => deleteEmployee(confirmDel.id)}>{T.deleteEmployee}</Btn>
               <Btn full variant="secondary" onClick={() => setConfirmDel(null)}>{T.cancel}</Btn>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Reset password modal (admin) */}
+      {resetTarget && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <Card style={{ maxWidth: 320, width: "100%" }}>
+            <div style={{ color: S.text, fontSize: 14, fontWeight: 700, marginBottom: 4 }}>🔑 {T.resetPassword}</div>
+            <div style={{ color: S.textMuted, fontSize: 12, marginBottom: 14 }}>{resetTarget.name} (@{resetTarget.username})</div>
+            <Inp label="Шинэ нууц үг" value={resetPw} onChange={v => { setResetPw(v); setResetMsg(""); }} placeholder="Хамгийн багадаа 4 тэмдэгт" />
+            {resetMsg && <div style={{ color: resetMsg.startsWith("✓") ? S.success : S.danger, fontSize: 12, marginBottom: 10, padding: "8px 12px", background: resetMsg.startsWith("✓") ? S.successBg : S.dangerBg, borderRadius: 8 }}>{resetMsg}</div>}
+            <div style={{ display: "flex", gap: 8 }}>
+              <Btn full onClick={doReset}>Шинэчлэх</Btn>
+              <Btn full variant="secondary" onClick={() => setResetTarget(null)}>{T.cancel}</Btn>
             </div>
           </Card>
         </div>
@@ -457,9 +521,11 @@ const EmployeesScreen = ({ employees, setEmployees, user }) => {
                 <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                   <div style={{ color: S.text, fontSize: 14, fontWeight: 700 }}>{emp.name}</div>
                   <Badge label={empRoleLabel(emp.role || "Employee")} color={empRoleColor(emp.role || "Employee")} />
+                  {emp.id === user.id && <Badge label="Та" color={S.accent} />}
                 </div>
                 <div style={{ color: S.textMuted, fontSize: 12 }}>{emp.position}</div>
                 <div style={{ color: S.textMuted, fontSize: 11, marginTop: 2 }}>{emp.email}</div>
+                {isAdmin && <div style={{ color: emp.username ? S.textMuted : S.warning, fontSize: 11, marginTop: 2 }}>{emp.username ? "@" + emp.username : "⚠️ " + T.noAccount}</div>}
               </div>
               <Badge label={emp.active ? T.activeLabel : T.inactiveLabel} color={emp.active ? S.success : S.textMuted} />
             </div>
@@ -477,9 +543,9 @@ const EmployeesScreen = ({ employees, setEmployees, user }) => {
                 {/* Role changer */}
                 <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
                   {[{ r: "Employee", l: "👤 Ажилтан", c: S.employee }, { r: "Manager", l: "👔 Менежер", c: S.manager }, { r: "Director", l: "★ Дээд Админ", c: S.director }].map(opt => (
-                    <button key={opt.r} onClick={() => changeRole(emp.id, opt.r)} style={{
+                    <button key={opt.r} disabled={emp.id === user.id} onClick={() => changeRole(emp.id, opt.r)} style={{
                       padding: "4px 10px", borderRadius: 8, border: `1px solid ${(emp.role || "Employee") === opt.r ? opt.c : S.border}`,
-                      cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "inherit",
+                      cursor: emp.id === user.id ? "not-allowed" : "pointer", opacity: emp.id === user.id ? 0.6 : 1, fontSize: 11, fontWeight: 600, fontFamily: "inherit",
                       background: (emp.role || "Employee") === opt.r ? opt.c + "22" : "transparent",
                       color: (emp.role || "Employee") === opt.r ? opt.c : S.textMuted
                     }}>{opt.l}</button>
@@ -493,9 +559,16 @@ const EmployeesScreen = ({ employees, setEmployees, user }) => {
                   <button onClick={() => openEdit(emp)} style={{ flex: 1, padding: "7px 10px", borderRadius: 8, border: `1px solid ${S.border}`, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "inherit", background: "rgba(255,255,255,0.04)", color: S.accent }}>
                     ✏️ {T.editEmployee}
                   </button>
-                  <button onClick={() => setConfirmDel(emp)} style={{ padding: "7px 12px", borderRadius: 8, border: `1px solid ${S.danger}30`, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "inherit", background: S.dangerBg, color: S.danger }}>
-                    🗑️
-                  </button>
+                  {emp.username && (
+                    <button onClick={() => openReset(emp)} title={T.resetPassword} style={{ padding: "7px 12px", borderRadius: 8, border: `1px solid ${S.warning}30`, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "inherit", background: S.warningBg, color: S.warning }}>
+                      🔑
+                    </button>
+                  )}
+                  {emp.id !== user.id && (
+                    <button onClick={() => setConfirmDel(emp)} style={{ padding: "7px 12px", borderRadius: 8, border: `1px solid ${S.danger}30`, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "inherit", background: S.dangerBg, color: S.danger }}>
+                      🗑️
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -523,7 +596,7 @@ const EmployeesScreen = ({ employees, setEmployees, user }) => {
 const AttendanceScreen = ({ user, employees, attendance, setAttendance }) => {
   const now = new Date(); const today = toLocalDate(now); const currentTime = toLocalTime(now);
   const [clocked, setClocked] = useState(false);
-  const emp = employees.find(e => e.userId === user.id);
+  const emp = user;
   const myRecord = attendance.find(a => emp && a.empId === emp.id && a.date === today);
   const todayAtt = attendance.filter(a => a.date === today);
   const clockInOut = () => {
@@ -541,9 +614,7 @@ const AttendanceScreen = ({ user, employees, attendance, setAttendance }) => {
         </div>
         <div style={{ color: S.text, fontSize: 48, fontWeight: 800, letterSpacing: "-2px", fontVariantNumeric: "tabular-nums" }}>{currentTime}</div>
         <div style={{ marginTop: 20 }}>
-          {!emp ? (
-            <div style={{ color: S.warning, fontSize: 13, fontWeight: 600, padding: "10px 14px", background: S.warningBg, borderRadius: 10 }}>{T.noLinkedEmployee}</div>
-          ) : !myRecord ? (
+          {!myRecord ? (
             <button onClick={clockInOut} style={{ background: "linear-gradient(135deg,#4F8EF7,#7C3AED)", border: "none", borderRadius: 50, width: 88, height: 88, cursor: "pointer", display: "inline-flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, boxShadow: "0 0 30px rgba(79,142,247,0.4)" }}
               onMouseDown={e => e.currentTarget.style.transform = "scale(0.93)"} onMouseUp={e => e.currentTarget.style.transform = "scale(1)"}>
               <Icon name="clock" size={24} color="#fff" /><span style={{ color: "#fff", fontSize: 10, fontWeight: 700 }}>{T.clockInBtn}</span>
@@ -940,7 +1011,7 @@ const TasksScreen = ({ tasks, setTasks, employees, user }) => {
   const statuses = ["Бүгд", T.pending, T.inProgress, T.completed];
   const filtered = tasks.filter(t => filter === "Бүгд" || t.status === filter);
   const canCreate = user.role === "Director" || user.role === "Manager";
-  const addTask = () => { if (!form.title) return; setTasks(prev => [...prev, { ...form, id: Date.now(), status: T.pending, assignee: parseInt(form.assignee) || 1 }]); setForm({ title: "", assignee: "", deadline: "", priority: "Дунд", notes: "" }); setShowForm(false); };
+  const addTask = () => { if (!form.title || !form.assignee) return; setTasks(prev => [...prev, { ...form, id: Date.now(), status: T.pending, assignee: parseInt(form.assignee) }]); setForm({ title: "", assignee: "", deadline: "", priority: "Дунд", notes: "" }); setShowForm(false); };
   const updateStatus = (id, status) => { setTasks(prev => prev.map(t => t.id === id ? { ...t, status } : t)); if (sel?.id === id) setSel(prev => ({ ...prev, status })); };
 
   if (sel) {
@@ -955,7 +1026,7 @@ const TasksScreen = ({ tasks, setTasks, employees, user }) => {
           </div>
           <div style={{ marginBottom: 14 }}><Badge label={sel.status} color={statusColor(sel.status)} /></div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
-            <div><div style={{ color: S.textMuted, fontSize: 11, marginBottom: 4 }}>{T.assignedTo}</div><div style={{ color: S.text, fontSize: 13, fontWeight: 600 }}>{assignee?.name}</div></div>
+            <div><div style={{ color: S.textMuted, fontSize: 11, marginBottom: 4 }}>{T.assignedTo}</div><div style={{ color: S.text, fontSize: 13, fontWeight: 600 }}>{assignee?.name || T.unassigned}</div></div>
             <div><div style={{ color: S.textMuted, fontSize: 11, marginBottom: 4 }}>{T.deadline.toUpperCase()}</div><div style={{ color: S.text, fontSize: 13, fontWeight: 600 }}>{sel.deadline}</div></div>
           </div>
           {sel.notes && <div style={{ background: S.bgInput, borderRadius: 10, padding: "10px 14px", marginBottom: 14 }}><div style={{ color: S.textMuted, fontSize: 11, marginBottom: 4 }}>{T.notes.toUpperCase()}</div><div style={{ color: S.textDim, fontSize: 13 }}>{sel.notes}</div></div>}
@@ -996,7 +1067,7 @@ const TasksScreen = ({ tasks, setTasks, employees, user }) => {
               <Badge label={task.priority} color={priorityColor(task.priority)} />
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-              <div style={{ color: S.textMuted, fontSize: 11 }}>👤 {assignee?.name}</div>
+              <div style={{ color: S.textMuted, fontSize: 11 }}>👤 {assignee?.name || T.unassigned}</div>
               <div style={{ color: S.textMuted, fontSize: 11 }}>📅 {task.deadline}</div>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1075,7 +1146,7 @@ const ReportsScreen = ({ employees, tasks, attendance }) => {
             <div style={{ color: S.text, fontSize: 14, fontWeight: 700, marginBottom: 14 }}>{T.taskList}</div>
             {tasks.map(task => { const assignee = employees.find(e => e.id === task.assignee); return (
               <div key={task.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 10, marginBottom: 10, borderBottom: `1px solid ${S.border}` }}>
-                <div style={{ flex: 1, marginRight: 8 }}><div style={{ color: S.text, fontSize: 12, fontWeight: 600 }}>{task.title}</div><div style={{ color: S.textMuted, fontSize: 11 }}>{assignee?.name}</div></div>
+                <div style={{ flex: 1, marginRight: 8 }}><div style={{ color: S.text, fontSize: 12, fontWeight: 600 }}>{task.title}</div><div style={{ color: S.textMuted, fontSize: 11 }}>{assignee?.name || T.unassigned}</div></div>
                 <Badge label={task.status} color={statusColor(task.status)} />
               </div>
             ); })}
@@ -1115,62 +1186,23 @@ const NotificationsScreen = ({ notifications, setNotifications }) => {
 };
 
 // ─── SETTINGS ─────────────────────────────────────────────────────────────────
-const SettingsScreen = ({ user, users, setUsers, setUser, onLogout }) => {
-  const [wh, setWh] = useState({ start: "08:00", end: "17:00", overtime: 8 });
-  const [storeName, setStoreName] = useState("Btech Store — Үндсэн салбар");
+const SettingsScreen = ({ user, employees, setEmployees, settings, setSettings, onLogout, onResetDemo }) => {
+  const [draft, setDraft] = useState(settings);
   const [saved, setSaved] = useState(false);
-  const [tab, setTab] = useState("settings"); // "settings" | "users" | "mypass"
-  // My password change
+  const [tab, setTab] = useState("settings"); // "settings" | "mypass"
   const [myPw, setMyPw] = useState({ old: "", new1: "", new2: "", show: false, msg: "", err: "" });
-  // Admin user management
-  const [editUser, setEditUser] = useState(null);
-  const [userForm, setUserForm] = useState({ username: "", password: "", name: "", role: "Employee" });
-  const [showUserForm, setShowUserForm] = useState(false);
-  const [userMsg, setUserMsg] = useState("");
-  const [resetTarget, setResetTarget] = useState(null);
-  const [resetPw, setResetPw] = useState("");
-  const [resetMsg, setResetMsg] = useState("");
 
   const isAdmin = user.role === "Director";
-  const save = () => { setSaved(true); setTimeout(() => setSaved(false), 2000); };
+  const save = () => { setSettings(draft); setSaved(true); setTimeout(() => setSaved(false), 2000); };
 
   // Change own password
   const changeMyPw = () => {
-    const me = users.find(u => u.id === user.id);
+    const me = employees.find(e => e.id === user.id);
     if (!me || myPw.old !== me.password) { setMyPw(p => ({ ...p, err: "Хуучин нууц үг буруу байна", msg: "" })); return; }
     if (myPw.new1.length < 4) { setMyPw(p => ({ ...p, err: "Нууц үг хамгийн багадаа 4 тэмдэгт байна", msg: "" })); return; }
     if (myPw.new1 !== myPw.new2) { setMyPw(p => ({ ...p, err: "Шинэ нууц үг таарахгүй байна", msg: "" })); return; }
-    setUsers(prev => prev.map(u => u.id === user.id ? { ...u, password: myPw.new1 } : u));
+    setEmployees(prev => prev.map(e => e.id === user.id ? { ...e, password: myPw.new1 } : e));
     setMyPw({ old: "", new1: "", new2: "", show: false, msg: "✓ Нууц үг амжилттай солигдлоо!", err: "" });
-  };
-
-  // Admin: add user
-  const openAddUser = () => { setEditUser(null); setUserForm({ username: "", password: "1234", name: "", role: "Employee" }); setShowUserForm(true); setUserMsg(""); };
-  const openEditUser = (u) => { setEditUser(u); setUserForm({ username: u.username, password: u.password, name: u.name, role: u.role }); setShowUserForm(true); setUserMsg(""); };
-  const saveUser = () => {
-    if (!userForm.username || !userForm.name) return;
-    if (editUser) {
-      setUsers(prev => prev.map(u => u.id === editUser.id ? { ...u, ...userForm } : u));
-      if (editUser.id === user.id) setUser(prev => ({ ...prev, ...userForm }));
-    } else {
-      if (users.find(u => u.username === userForm.username)) { setUserMsg("Энэ нэвтрэх нэр аль хэдийн бүртгэлтэй!"); return; }
-      setUsers(prev => [...prev, { ...userForm, id: Date.now() }]);
-    }
-    setShowUserForm(false); setEditUser(null);
-    setUserMsg(editUser ? "✓ Хэрэглэгч шинэчлэгдлээ" : "✓ Хэрэглэгч нэмэгдлээ");
-    setTimeout(() => setUserMsg(""), 2500);
-  };
-  const deleteUser = (uid) => {
-    if (uid === user.id) { setUserMsg("Өөрийгөө устгах боломжгүй!"); return; }
-    setUsers(prev => prev.filter(u => u.id !== uid));
-  };
-  // Admin: reset password
-  const openReset = (u) => { setResetTarget(u); setResetPw(""); setResetMsg(""); };
-  const doReset = () => {
-    if (resetPw.length < 4) { setResetMsg("Хамгийн багадаа 4 тэмдэгт оруулна уу"); return; }
-    setUsers(prev => prev.map(u => u.id === resetTarget.id ? { ...u, password: resetPw } : u));
-    setResetMsg("✓ Нууц үг шинэчлэгдлээ!");
-    setTimeout(() => { setResetTarget(null); setResetMsg(""); }, 1500);
   };
 
   return (
@@ -1191,7 +1223,7 @@ const SettingsScreen = ({ user, users, setUsers, setUser, onLogout }) => {
 
       {/* Tab selector */}
       <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
-        {[{ k: "settings", l: "⚙️ Ерөнхий" }, { k: "mypass", l: "🔑 Нууц үг" }, ...(isAdmin ? [{ k: "users", l: "👥 Хэрэглэгчид" }] : [])].map(t => (
+        {[{ k: "settings", l: "⚙️ Ерөнхий" }, { k: "mypass", l: "🔑 Нууц үг" }].map(t => (
           <button key={t.k} onClick={() => setTab(t.k)} style={{ flex: 1, padding: "8px 4px", borderRadius: 10, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "inherit", background: tab === t.k ? S.accent : S.bgCard, color: tab === t.k ? "#fff" : S.textMuted }}>{t.l}</button>
         ))}
       </div>
@@ -1202,18 +1234,26 @@ const SettingsScreen = ({ user, users, setUsers, setUser, onLogout }) => {
           <Card style={{ marginBottom: 14 }}>
             <div style={{ color: S.text, fontSize: 14, fontWeight: 700, marginBottom: 14 }}>{T.workHours}</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <Inp label={T.startTime} type="time" value={wh.start} onChange={v => setWh(h => ({ ...h, start: v }))} />
-              <Inp label={T.endTime} type="time" value={wh.end} onChange={v => setWh(h => ({ ...h, end: v }))} />
+              <Inp label={T.startTime} type="time" value={draft.workStart} onChange={v => setDraft(d => ({ ...d, workStart: v }))} />
+              <Inp label={T.endTime} type="time" value={draft.workEnd} onChange={v => setDraft(d => ({ ...d, workEnd: v }))} />
             </div>
-            <Inp label={T.overtimeThreshold} value={wh.overtime} onChange={v => setWh(h => ({ ...h, overtime: v }))} />
+            <Inp label={T.overtimeThreshold} value={draft.overtime} onChange={v => setDraft(d => ({ ...d, overtime: v }))} />
           </Card>
           <Card style={{ marginBottom: 14 }}>
             <div style={{ color: S.text, fontSize: 14, fontWeight: 700, marginBottom: 14 }}>{T.storeInfo}</div>
-            <Inp label={T.storeName} value={storeName} onChange={setStoreName} />
+            <Inp label={T.storeName} value={draft.storeName} onChange={v => setDraft(d => ({ ...d, storeName: v }))} />
           </Card>
           {saved && <div style={{ color: S.success, textAlign: "center", fontSize: 13, fontWeight: 600, padding: 8, background: S.successBg, borderRadius: 10, marginBottom: 10 }}>{T.settingsSaved}</div>}
-          <Btn full onClick={save} style={{ marginBottom: 10 }}>{T.saveSettings}</Btn>
+          <Btn full onClick={save}>{T.saveSettings}</Btn>
+          <div style={{ height: 10 }} />
           <Btn full variant="danger" icon="logout" onClick={onLogout}>{T.signOut}</Btn>
+          {isAdmin && (
+            <Card style={{ marginTop: 14 }}>
+              <div style={{ color: S.text, fontSize: 14, fontWeight: 700, marginBottom: 6 }}>{T.securityData}</div>
+              <div style={{ color: S.textMuted, fontSize: 12, marginBottom: 12 }}>{T.dataStoredLocally}</div>
+              <Btn full variant="secondary" onClick={() => { if (window.confirm(T.resetDemoConfirm)) onResetDemo(); }}>↺ {T.resetDemo}</Btn>
+            </Card>
+          )}
         </div>
       )}
 
@@ -1251,81 +1291,6 @@ const SettingsScreen = ({ user, users, setUsers, setUser, onLogout }) => {
         </Card>
       )}
 
-      {/* ── USER MANAGEMENT (Admin only) ── */}
-      {tab === "users" && isAdmin && (
-        <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <div style={{ color: S.director, fontSize: 12, fontWeight: 600 }}>★ Нийт {users.length} хэрэглэгч</div>
-            <Btn size="sm" icon="plus" onClick={openAddUser}>Нэмэх</Btn>
-          </div>
-
-          {userMsg && <div style={{ color: userMsg.startsWith("✓") ? S.success : S.danger, fontSize: 12, marginBottom: 12, padding: "8px 12px", background: userMsg.startsWith("✓") ? S.successBg : S.dangerBg, borderRadius: 8 }}>{userMsg}</div>}
-
-          {/* Add/Edit user form */}
-          {showUserForm && (
-            <Card style={{ marginBottom: 14, border: `1px solid ${editUser ? S.warning + "50" : S.accent + "50"}` }}>
-              <div style={{ color: S.text, fontSize: 14, fontWeight: 700, marginBottom: 14 }}>{editUser ? "✏️ Хэрэглэгч засах" : "➕ Шинэ хэрэглэгч нэмэх"}</div>
-              <Inp label="Нэвтрэх нэр (username)" value={userForm.username} onChange={v => setUserForm(f => ({ ...f, username: v }))} placeholder="жишээ: user1" />
-              <Inp label="Бүтэн нэр" value={userForm.name} onChange={v => setUserForm(f => ({ ...f, name: v }))} placeholder="Овог нэр" />
-              {!editUser && <Inp label="Нууц үг" value={userForm.password} onChange={v => setUserForm(f => ({ ...f, password: v }))} placeholder="Анхны нууц үг" />}
-              <Sel label="Эрх / Үүрэг" value={userForm.role} onChange={v => setUserForm(f => ({ ...f, role: v }))}
-                options={[{ value: "Employee", label: "👤 Ажилтан" }, { value: "Manager", label: "👔 Менежер" }, { value: "Director", label: "★ Дээд Админ" }]} />
-              <div style={{ display: "flex", gap: 8 }}>
-                <Btn full onClick={saveUser}>{editUser ? "Хадгалах" : "Нэмэх"}</Btn>
-                <Btn variant="secondary" onClick={() => { setShowUserForm(false); setEditUser(null); }}>{T.cancel}</Btn>
-              </div>
-            </Card>
-          )}
-
-          {/* Reset password modal */}
-          {resetTarget && (
-            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-              <Card style={{ maxWidth: 320, width: "100%" }}>
-                <div style={{ color: S.text, fontSize: 14, fontWeight: 700, marginBottom: 4 }}>🔑 Нууц үг шинэчлэх</div>
-                <div style={{ color: S.textMuted, fontSize: 12, marginBottom: 14 }}>{resetTarget.name} (@{resetTarget.username})</div>
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ color: S.textDim, fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Шинэ нууц үг</div>
-                  <input type="text" value={resetPw} onChange={e => { setResetPw(e.target.value); setResetMsg(""); }}
-                    placeholder="Хамгийн багадаа 4 тэмдэгт"
-                    style={{ width: "100%", background: S.bgInput, border: `1px solid ${S.border}`, borderRadius: 10, padding: "11px 14px", color: S.text, fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
-                    onFocus={e => e.target.style.borderColor = S.accent} onBlur={e => e.target.style.borderColor = S.border} />
-                </div>
-                {resetMsg && <div style={{ color: resetMsg.startsWith("✓") ? S.success : S.danger, fontSize: 12, marginBottom: 10, padding: "8px 12px", background: resetMsg.startsWith("✓") ? S.successBg : S.dangerBg, borderRadius: 8 }}>{resetMsg}</div>}
-                <div style={{ display: "flex", gap: 8 }}>
-                  <Btn full onClick={doReset}>Шинэчлэх</Btn>
-                  <Btn full variant="secondary" onClick={() => setResetTarget(null)}>{T.cancel}</Btn>
-                </div>
-              </Card>
-            </div>
-          )}
-
-          {/* User list */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {users.map(u => (
-              <Card key={u.id} style={{ padding: 14 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                  <Avatar name={u.name} size={36} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <div style={{ color: S.text, fontSize: 13, fontWeight: 700 }}>{u.name}</div>
-                      {u.id === user.id && <Badge label="Та" color={S.accent} />}
-                    </div>
-                    <div style={{ color: S.textMuted, fontSize: 11 }}>@{u.username}</div>
-                    <Badge label={roleLabel(u.role)} color={roleColor(u.role)} />
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={() => openEditUser(u)} style={{ flex: 1, padding: "7px 0", borderRadius: 8, border: `1px solid ${S.border}`, cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "inherit", background: "rgba(255,255,255,0.04)", color: S.accent }}>✏️ Засах</button>
-                  <button onClick={() => openReset(u)} style={{ flex: 1, padding: "7px 0", borderRadius: 8, border: `1px solid ${S.warning}30`, cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "inherit", background: S.warningBg, color: S.warning }}>🔑 Нууц үг</button>
-                  {u.id !== user.id && (
-                    <button onClick={() => deleteUser(u.id)} style={{ padding: "7px 12px", borderRadius: 8, border: `1px solid ${S.danger}30`, cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "inherit", background: S.dangerBg, color: S.danger }}>🗑️</button>
-                  )}
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
@@ -1372,28 +1337,39 @@ const TopBar = ({ screen, notifications, onNavigate }) => {
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [user, setUser] = useState(null); const [screen, setScreen] = useState("home");
-  const [employees, setEmployees] = useState(MOCK_EMPLOYEES);
-  const [users, setUsers] = useState(MOCK_USERS);
-  const [tasks, setTasks] = useState(MOCK_TASKS);
-  const [attendance, setAttendance] = useState(MOCK_ATTENDANCE);
-  const [shifts, setShifts] = useState(MOCK_SHIFTS);
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
+  const [screen, setScreen] = useState("home");
+  const [employees, setEmployees] = usePersistedState("employees", MOCK_EMPLOYEES);
+  const [tasks, setTasks] = usePersistedState("tasks", MOCK_TASKS);
+  const [attendance, setAttendance] = usePersistedState("attendance", MOCK_ATTENDANCE);
+  const [shifts, setShifts] = usePersistedState("shifts", MOCK_SHIFTS);
+  const [notifications, setNotifications] = usePersistedState("notifications", MOCK_NOTIFICATIONS);
+  const [settings, setSettings] = usePersistedState("settings", DEFAULT_SETTINGS);
+  const [currentUserId, setCurrentUserId] = usePersistedState("session", null);
+  // The signed-in user is always read from the employee list, so role/name edits apply immediately
+  // and a deleted or deactivated employee is signed out automatically.
+  const user = employees.find(e => e.id === currentUserId && e.active) || null;
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const handleLogin = (u) => { setUser(u); };
+  const handleLogout = () => { setCurrentUserId(null); setScreen("home"); };
+  const deleteEmployee = (id) => {
+    setEmployees(prev => prev.filter(e => e.id !== id));
+    setShifts(prev => prev.filter(s => s.empId !== id));
+    setAttendance(prev => prev.filter(a => a.empId !== id));
+    setTasks(prev => prev.map(t => t.assignee === id ? { ...t, assignee: null } : t));
+  };
+  const resetDemo = () => { clearStoredData(); window.location.reload(); };
 
-  if (!user) return <LoginScreen onLogin={handleLogin} users={users} />;
+  if (!user) return <LoginScreen onLogin={e => setCurrentUserId(e.id)} employees={employees} />;
 
   const screens = {
     home: <Dashboard user={user} employees={employees} tasks={tasks} attendance={attendance} notifications={notifications} onNavigate={setScreen} />,
-    employees: <EmployeesScreen employees={employees} setEmployees={setEmployees} user={user} />,
+    employees: <EmployeesScreen employees={employees} setEmployees={setEmployees} user={user} onDelete={deleteEmployee} />,
     attendance: <AttendanceScreen user={user} employees={employees} attendance={attendance} setAttendance={setAttendance} />,
     tasks: <TasksScreen tasks={tasks} setTasks={setTasks} employees={employees} user={user} />,
     schedule: <ScheduleScreen employees={employees} shifts={shifts} setShifts={setShifts} user={user} />,
     reports: <ReportsScreen employees={employees} tasks={tasks} attendance={attendance} />,
     notifications: <NotificationsScreen notifications={notifications} setNotifications={setNotifications} />,
-    settings: <SettingsScreen user={user} users={users} setUsers={setUsers} setUser={setUser} onLogout={() => { setUser(null); setScreen("home"); }} />,
+    settings: <SettingsScreen user={user} employees={employees} setEmployees={setEmployees} settings={settings} setSettings={setSettings} onLogout={handleLogout} onResetDemo={resetDemo} />,
   };
 
   return (
