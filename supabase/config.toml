@@ -1,0 +1,3 @@
+# Minimal config so `supabase functions deploy admin` works from this repo.
+[functions.admin]
+verify_jwt = true

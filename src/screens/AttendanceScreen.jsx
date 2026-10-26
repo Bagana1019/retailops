@@ -6,7 +6,7 @@ import { S } from "../theme";
 import { toLocalDate, toLocalTime } from "../utils/date";
 
 // ─── ATTENDANCE ───────────────────────────────────────────────────────────────
-const AttendanceScreen = ({ user, employees, attendance, setAttendance }) => {
+const AttendanceScreen = ({ user, employees, attendance, api }) => {
   const now = new Date(); const today = toLocalDate(now); const currentTime = toLocalTime(now);
   const [clocked, setClocked] = useState(false);
   const emp = user;
@@ -14,10 +14,12 @@ const AttendanceScreen = ({ user, employees, attendance, setAttendance }) => {
   const canSeeAll = user.role === "Director" || user.role === "Manager";
   const todayAtt = attendance.filter(a => a.date === today);
   const myHistory = attendance.filter(a => a.empId === user.id).sort((a, b) => (b.date + b.checkIn).localeCompare(a.date + a.checkIn)).slice(0, 10);
-  const clockInOut = () => {
+  const clockInOut = async () => {
     if (!emp) return;
-    if (!myRecord) setAttendance(prev => [...prev, { id: Date.now(), empId: emp.id, date: today, checkIn: currentTime, checkOut: null, status: currentTime <= "08:10" ? "Цагтаа" : "Хоцорсон" }]);
-    else if (!myRecord.checkOut) setAttendance(prev => prev.map(a => a.id === myRecord.id ? { ...a, checkOut: currentTime } : a));
+    let r = {};
+    if (!myRecord) r = await api.checkIn({ empId: emp.id, date: today, checkIn: currentTime, status: currentTime <= "08:10" ? "Цагтаа" : "Хоцорсон" });
+    else if (!myRecord.checkOut) r = await api.checkOut(myRecord.id, currentTime);
+    if (r.error) return;
     setClocked(true); setTimeout(() => setClocked(false), 2000);
   };
   return (

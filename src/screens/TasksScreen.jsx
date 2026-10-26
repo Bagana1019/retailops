@@ -5,7 +5,7 @@ import { T } from "../i18n";
 import { S, priorityColor, statusColor } from "../theme";
 
 // ─── TASKS ────────────────────────────────────────────────────────────────────
-const TasksScreen = ({ tasks, setTasks, employees, user }) => {
+const TasksScreen = ({ tasks, employees, user, api }) => {
   const [filter, setFilter] = useState("Бүгд"); const [showForm, setShowForm] = useState(false); const [sel, setSel] = useState(null);
   const [form, setForm] = useState({ title: "", assignee: "", deadline: "", priority: "Дунд", notes: "" });
   const statuses = ["Бүгд", T.pending, T.inProgress, T.completed];
@@ -14,8 +14,14 @@ const TasksScreen = ({ tasks, setTasks, employees, user }) => {
   const isEmployee = user.role === "Employee";
   const visible = isEmployee ? tasks.filter(t => t.assignee === user.id) : tasks;
   const filtered = visible.filter(t => filter === "Бүгд" || t.status === filter);
-  const addTask = () => { if (!form.title || !form.assignee) return; setTasks(prev => [...prev, { ...form, id: Date.now(), status: T.pending, assignee: parseInt(form.assignee) }]); setForm({ title: "", assignee: "", deadline: "", priority: "Дунд", notes: "" }); setShowForm(false); };
-  const updateStatus = (id, status) => { if (!visible.some(t => t.id === id)) return; setTasks(prev => prev.map(t => t.id === id ? { ...t, status } : t)); if (sel?.id === id) setSel(prev => ({ ...prev, status })); };
+  const addTask = async () => {
+    const emp = employees.find(e => String(e.id) === String(form.assignee));
+    if (!form.title || !emp) return;
+    const r = await api.create({ ...form, assignee: emp.id });
+    if (r.error) return;
+    setForm({ title: "", assignee: "", deadline: "", priority: "Дунд", notes: "" }); setShowForm(false);
+  };
+  const updateStatus = async (id, status) => { if (!visible.some(t => t.id === id)) return; const r = await api.updateStatus(id, status); if (!r.error && sel?.id === id) setSel(prev => ({ ...prev, status })); };
 
   if (sel) {
     const assignee = employees.find(e => e.id === sel.assignee);

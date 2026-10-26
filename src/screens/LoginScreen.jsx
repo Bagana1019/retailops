@@ -6,13 +6,14 @@ import { T } from "../i18n";
 import { S } from "../theme";
 
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
-const LoginScreen = ({ onLogin, employees }) => {
-  const [u, setU] = useState(""); const [p, setP] = useState(""); const [err, setErr] = useState(""); const [show, setShow] = useState(false);
-  const login = () => {
-    const emp = employees.find(x => x.username && x.username === u.trim() && x.password === p);
-    if (!emp) return setErr(T.invalidLogin);
-    if (!emp.active) return setErr(T.inactiveLogin);
-    onLogin(emp);
+const LoginScreen = ({ onLogin, mode, error }) => {
+  const [u, setU] = useState(""); const [p, setP] = useState(""); const [err, setErr] = useState(error || ""); const [show, setShow] = useState(false); const [busy, setBusy] = useState(false);
+  const login = async () => {
+    if (!u.trim() || !p || busy) return;
+    setBusy(true); setErr("");
+    const r = await onLogin(u, p);
+    setBusy(false);
+    if (r?.error) setErr(r.error);
   };
   return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #EEF2FF 0%, #F4F6FA 50%, #E8F4FD 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "32px 24px" }}>
@@ -35,8 +36,9 @@ const LoginScreen = ({ onLogin, employees }) => {
           </div>
         </div>
         {err && <div style={{ color: S.danger, fontSize: 13, marginBottom: 12, padding: "8px 12px", background: S.dangerBg, borderRadius: 8 }}>{err}</div>}
-        <Btn full size="lg" onClick={login}>{T.signIn}</Btn>
-        <div style={{ color: S.textMuted, fontSize: 12, textAlign: "center", marginTop: 14 }}>{T.demo}</div>
+        <Btn full size="lg" onClick={login} disabled={busy}>{busy ? T.loading : T.signIn}</Btn>
+        <div style={{ color: S.textMuted, fontSize: 12, textAlign: "center", marginTop: 14 }}>{mode === "local" ? T.demo : T.liveMode}</div>
+        {mode === "local" && <div style={{ color: S.warning, fontSize: 11, textAlign: "center", marginTop: 6 }}>{T.demoMode}</div>}
       </Card>
     </div>
   );

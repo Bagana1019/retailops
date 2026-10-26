@@ -5,22 +5,21 @@ import { T } from "../i18n";
 import { S, roleColor, roleLabel } from "../theme";
 
 // ─── SETTINGS ─────────────────────────────────────────────────────────────────
-const SettingsScreen = ({ user, employees, setEmployees, settings, setSettings, onLogout, onResetDemo }) => {
+const SettingsScreen = ({ user, settings, mode, onSaveSettings, onChangePassword, onLogout, onResetDemo }) => {
   const [draft, setDraft] = useState(settings);
   const [saved, setSaved] = useState(false);
   const [tab, setTab] = useState("settings"); // "settings" | "mypass"
   const [myPw, setMyPw] = useState({ old: "", new1: "", new2: "", show: false, msg: "", err: "" });
 
   const isAdmin = user.role === "Director";
-  const save = () => { setSettings(draft); setSaved(true); setTimeout(() => setSaved(false), 2000); };
+  const save = async () => { const r = await onSaveSettings(draft); if (r.error) return; setSaved(true); setTimeout(() => setSaved(false), 2000); };
 
   // Change own password
-  const changeMyPw = () => {
-    const me = employees.find(e => e.id === user.id);
-    if (!me || myPw.old !== me.password) { setMyPw(p => ({ ...p, err: "Хуучин нууц үг буруу байна", msg: "" })); return; }
+  const changeMyPw = async () => {
     if (myPw.new1.length < 4) { setMyPw(p => ({ ...p, err: "Нууц үг хамгийн багадаа 4 тэмдэгт байна", msg: "" })); return; }
     if (myPw.new1 !== myPw.new2) { setMyPw(p => ({ ...p, err: "Шинэ нууц үг таарахгүй байна", msg: "" })); return; }
-    setEmployees(prev => prev.map(e => e.id === user.id ? { ...e, password: myPw.new1 } : e));
+    const r = await onChangePassword(myPw.old, myPw.new1);
+    if (r.error) { setMyPw(p => ({ ...p, err: r.error, msg: "" })); return; }
     setMyPw({ old: "", new1: "", new2: "", show: false, msg: "✓ Нууц үг амжилттай солигдлоо!", err: "" });
   };
 
@@ -69,8 +68,8 @@ const SettingsScreen = ({ user, employees, setEmployees, settings, setSettings, 
           {isAdmin && (
             <Card style={{ marginTop: 14 }}>
               <div style={{ color: S.text, fontSize: 14, fontWeight: 700, marginBottom: 6 }}>{T.securityData}</div>
-              <div style={{ color: S.textMuted, fontSize: 12, marginBottom: 12 }}>{T.dataStoredLocally}</div>
-              <Btn full variant="secondary" onClick={() => { if (window.confirm(T.resetDemoConfirm)) onResetDemo(); }}>↺ {T.resetDemo}</Btn>
+              <div style={{ color: S.textMuted, fontSize: 12, marginBottom: mode === "local" ? 12 : 0 }}>{mode === "local" ? T.dataStoredLocally : "✓ " + T.liveMode}</div>
+              {mode === "local" && onResetDemo && <Btn full variant="secondary" onClick={() => { if (window.confirm(T.resetDemoConfirm)) onResetDemo(); }}>↺ {T.resetDemo}</Btn>}
             </Card>
           )}
         </div>

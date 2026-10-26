@@ -5,7 +5,7 @@ import { S } from "../theme";
 import { toLocalDate } from "../utils/date";
 
 // ─── SCHEDULE ─────────────────────────────────────────────────────────────────
-const ScheduleScreen = ({ employees, shifts, setShifts, user }) => {
+const ScheduleScreen = ({ employees, shifts, user, api }) => {
   const todayObj = new Date();
   const today = toLocalDate(todayObj);
 
@@ -61,18 +61,17 @@ const ScheduleScreen = ({ employees, shifts, setShifts, user }) => {
     setShowForm(true);
   };
 
-  const saveShift = () => {
-    if (!form.empId) return;
-    const data = { ...form, empId: parseInt(form.empId) };
-    if (editShift) {
-      setShifts(prev => prev.map(s => s.id === editShift.id ? { ...s, ...data } : s));
-    } else {
-      setShifts(prev => [...prev, { ...data, id: Date.now() }]);
-    }
+  const saveShift = async () => {
+    // <select> values are strings; ids may be numbers (demo) or uuids (Supabase), so resolve against the list.
+    const emp = employees.find(e => String(e.id) === String(form.empId));
+    if (!emp) return;
+    const data = { ...form, empId: emp.id };
+    const r = editShift ? await api.update(editShift.id, data) : await api.create(data);
+    if (r.error) return;
     setShowForm(false); setEditShift(null);
   };
 
-  const deleteShift = (id) => { setShifts(prev => prev.filter(s => s.id !== id)); setConfirmDel(null); };
+  const deleteShift = async (id) => { await api.remove(id); setConfirmDel(null); };
 
   const calcDuration = (start, end) => {
     if (!start || !end) return "";

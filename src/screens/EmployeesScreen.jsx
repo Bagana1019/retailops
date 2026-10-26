@@ -5,7 +5,7 @@ import { T } from "../i18n";
 import { S } from "../theme";
 
 // ─── EMPLOYEES ────────────────────────────────────────────────────────────────
-const EmployeesScreen = ({ employees, setEmployees, user, onDelete }) => {
+const EmployeesScreen = ({ employees, user, api, mode }) => {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [showForm, setShowForm] = useState(false);
@@ -13,6 +13,7 @@ const EmployeesScreen = ({ employees, setEmployees, user, onDelete }) => {
   const [confirmDel, setConfirmDel] = useState(null);
   const [form, setForm] = useState({ name: "", phone: "", email: "", position: "", joined: "", role: "Employee", username: "", password: "" });
   const [formErr, setFormErr] = useState("");
+  const [busy, setBusy] = useState(false);
   const [resetTarget, setResetTarget] = useState(null);
   const [resetPw, setResetPw] = useState("");
   const [resetMsg, setResetMsg] = useState("");
@@ -28,30 +29,37 @@ const EmployeesScreen = ({ employees, setEmployees, user, onDelete }) => {
   const openAdd = () => { setEditEmp(null); setForm({ name: "", phone: "", email: "", position: "", joined: "", role: "Employee", username: "", password: "" }); setFormErr(""); setShowForm(true); };
   const openEdit = (emp) => { setEditEmp(emp); setForm({ name: emp.name, phone: emp.phone, email: emp.email, position: emp.position, joined: emp.joined, role: emp.role || "Employee", username: emp.username || "", password: "" }); setFormErr(""); setShowForm(true); };
 
-  const saveEmployee = () => {
-    if (!form.name) return;
+  // With a real backend every employee needs a login (the profile row belongs to an auth user).
+  const loginRequired = mode === "supabase";
+  // Only the Director edits roles; Managers may create logins (the server forces role = Employee for them).
+  const canEditAccount = isAdmin || (loginRequired && canEdit && !editEmp);
+
+  const saveEmployee = async () => {
+    if (!form.name || busy) return;
     const username = form.username.trim();
     if (username && employees.some(e => e.username === username && e.id !== editEmp?.id)) { setFormErr(T.usernameTaken); return; }
+    if (loginRequired && !editEmp && (!username || form.password.length < 4)) { setFormErr(T.loginRequiredForNew); return; }
     const { password, ...rest } = form;
-    const base = { ...rest, username };
-    // Managers cannot grant roles or logins; only Director edits account fields.
-    if (!isAdmin) { delete base.role; delete base.username; }
-    if (editEmp) {
-      setEmployees(prev => prev.map(e => e.id === editEmp.id ? { ...e, ...base, ...(isAdmin && password ? { password } : {}) } : e));
-    } else {
-      setEmployees(prev => [...prev, { ...base, role: base.role || "Employee", password: isAdmin ? password : "", id: Date.now(), active: true }]);
-    }
+    const data = { ...rest, username };
+    if (!canEditAccount) { delete data.role; delete data.username; }
+    else if (password) data.password = password;
+    if (!isAdmin) data.role = "Employee";
+    setBusy(true);
+    const r = editEmp ? await api.update(editEmp.id, data) : await api.create(data);
+    setBusy(false);
+    if (r.error) { setFormErr(r.error); return; }
     setForm({ name: "", phone: "", email: "", position: "", joined: "", role: "Employee", username: "", password: "" });
     setShowForm(false); setEditEmp(null); setFormErr("");
   };
 
-  const deleteEmployee = (id) => { onDelete(id); setConfirmDel(null); };
-  const toggleActive = id => setEmployees(prev => prev.map(e => e.id === id ? { ...e, active: !e.active } : e));
-  const changeRole = (id, role) => { if (id === user.id) return; setEmployees(prev => prev.map(e => e.id === id ? { ...e, role } : e)); };
+  const deleteEmployee = async (id) => { await api.remove(id); setConfirmDel(null); };
+  const toggleActive = (emp) => api.update(emp.id, { active: !emp.active });
+  const changeRole = (id, role) => { if (id === user.id) return; api.update(id, { role }); };
   const openReset = (emp) => { setResetTarget(emp); setResetPw(""); setResetMsg(""); };
-  const doReset = () => {
+  const doReset = async () => {
     if (resetPw.length < 4) { setResetMsg("Хамгийн багадаа 4 тэмдэгт оруулна уу"); return; }
-    setEmployees(prev => prev.map(e => e.id === resetTarget.id ? { ...e, password: resetPw } : e));
+    const r = await api.resetPassword(resetTarget.id, resetPw);
+    if (r.error) { setResetMsg(r.error); return; }
     setResetMsg("✓ Нууц үг шинэчлэгдлээ!");
     setTimeout(() => { setResetTarget(null); setResetMsg(""); }, 1500);
   };
@@ -81,18 +89,18 @@ const EmployeesScreen = ({ employees, setEmployees, user, onDelete }) => {
           <Inp label={T.email} value={form.email} onChange={v => setForm(f => ({ ...f, email: v }))} />
           <Inp label={T.position} value={form.position} onChange={v => setForm(f => ({ ...f, position: v }))} />
           <Inp label={T.dateOfJoining} type="date" value={form.joined} onChange={v => setForm(f => ({ ...f, joined: v }))} />
-          {isAdmin && (
+          {canEditAccount && (
             <div style={{ borderTop: `1px solid ${S.border}`, paddingTop: 12, marginBottom: 4 }}>
               <div style={{ color: S.textMuted, fontSize: 10, fontWeight: 600, letterSpacing: "0.06em", marginBottom: 10 }}>{T.accountSection}</div>
               <Inp label={T.usernameLabel} value={form.username} onChange={v => setForm(f => ({ ...f, username: v }))} placeholder="жишээ: user1" />
               <Inp label={editEmp ? T.newPasswordEdit : T.newPassword} value={form.password} onChange={v => setForm(f => ({ ...f, password: v }))} placeholder={editEmp ? "" : "Анхны нууц үг"} />
-              <Sel label="Эрх / Үүрэг" value={form.role} onChange={v => setForm(f => ({ ...f, role: v }))}
-                options={[{ value: "Employee", label: "👤 Ажилтан" }, { value: "Manager", label: "👔 Менежер" }, { value: "Director", label: "★ Дээд Админ" }]} />
+              {isAdmin && <Sel label="Эрх / Үүрэг" value={form.role} onChange={v => setForm(f => ({ ...f, role: v }))}
+                options={[{ value: "Employee", label: "👤 Ажилтан" }, { value: "Manager", label: "👔 Менежер" }, { value: "Director", label: "★ Дээд Админ" }]} />}
             </div>
           )}
           {formErr && <div style={{ color: S.danger, fontSize: 12, marginBottom: 10, padding: "8px 12px", background: S.dangerBg, borderRadius: 8 }}>{formErr}</div>}
           <div style={{ display: "flex", gap: 8 }}>
-            <Btn full onClick={saveEmployee}>{editEmp ? T.save : T.saveEmployee}</Btn>
+            <Btn full onClick={saveEmployee} disabled={busy}>{busy ? T.saving : editEmp ? T.save : T.saveEmployee}</Btn>
             <Btn variant="secondary" onClick={() => { setShowForm(false); setEditEmp(null); }}>{T.cancel}</Btn>
           </div>
         </Card>
@@ -186,7 +194,7 @@ const EmployeesScreen = ({ employees, setEmployees, user, onDelete }) => {
                 </div>
                 {/* Action buttons */}
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={() => toggleActive(emp.id)} style={{ flex: 1, padding: "7px 10px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "inherit", background: emp.active ? S.dangerBg : S.successBg, color: emp.active ? S.danger : S.success }}>
+                  <button onClick={() => toggleActive(emp)} style={{ flex: 1, padding: "7px 10px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "inherit", background: emp.active ? S.dangerBg : S.successBg, color: emp.active ? S.danger : S.success }}>
                     {emp.active ? T.deactivate : T.activate}
                   </button>
                   <button onClick={() => openEdit(emp)} style={{ flex: 1, padding: "7px 10px", borderRadius: 8, border: `1px solid ${S.border}`, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "inherit", background: "rgba(255,255,255,0.04)", color: S.accent }}>
@@ -209,7 +217,7 @@ const EmployeesScreen = ({ employees, setEmployees, user, onDelete }) => {
             {/* Manager (non-admin) actions */}
             {canEdit && !isAdmin && (
               <div style={{ borderTop: `1px solid ${S.border}`, paddingTop: 10, display: "flex", gap: 8 }}>
-                <button onClick={() => toggleActive(emp.id)} style={{ flex: 1, padding: "7px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "inherit", background: emp.active ? S.dangerBg : S.successBg, color: emp.active ? S.danger : S.success }}>
+                <button onClick={() => toggleActive(emp)} style={{ flex: 1, padding: "7px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "inherit", background: emp.active ? S.dangerBg : S.successBg, color: emp.active ? S.danger : S.success }}>
                   {emp.active ? T.deactivate : T.activate}
                 </button>
                 <button onClick={() => openEdit(emp)} style={{ flex: 1, padding: "7px", borderRadius: 8, border: `1px solid ${S.border}`, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "inherit", background: "rgba(255,255,255,0.04)", color: S.accent }}>
