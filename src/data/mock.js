@@ -10,7 +10,7 @@ export const MOCK_EMPLOYEES = [
   { id: 5, name: "Реем Отайби", phone: "+976-9955-6677", email: "reem@store.mn", position: "Кассчин", joined: "2023-08-05", active: true, username: "", password: "", role: "Employee" },
 ];
 
-export const DEFAULT_SETTINGS = { workStart: "08:00", workEnd: "17:00", overtime: 8, storeName: "Btech Store — Үндсэн салбар" };
+export const DEFAULT_SETTINGS = { workStart: "08:00", workEnd: "17:00", overtime: 8, storeName: "Btech Store — Үндсэн салбар", lateGraceMin: 10, storeLat: null, storeLng: null, geoRadiusM: 150 };
 
 export const MOCK_ATTENDANCE = [
   { id: 1, empId: 1, date: "2026-04-21", checkIn: "08:02", checkOut: "17:05", status: "Цагтаа" },

@@ -21,7 +21,7 @@ export function createLocalStore() {
     attendance: load("attendance", MOCK_ATTENDANCE),
     shifts: load("shifts", MOCK_SHIFTS),
     notifications: load("notifications", MOCK_NOTIFICATIONS),
-    settings: load("settings", DEFAULT_SETTINGS),
+    settings: { ...DEFAULT_SETTINGS, ...load("settings", {}) },
     sessionId: load("sessionId", null),
   });
 
@@ -108,6 +108,7 @@ export function createLocalStore() {
     },
 
     settings: { async save(settings) { update({ settings }); return {}; } },
+    push: { async save() { return {}; }, async remove() { return {}; }, async isSaved() { return false; } },
 
     // Demo only: wipe this browser's data and reload with the seed data.
     resetDemo() {

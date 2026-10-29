@@ -1,17 +1,50 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Icon from "../components/Icon";
 import { Avatar, Badge, Btn, Card, Inp } from "../components/ui";
 import { T } from "../i18n";
 import { S, roleColor, roleLabel } from "../theme";
+import { getPosition } from "../lib/geo";
+import { pushSupported, subscribeToPush, unsubscribeFromPush, currentPushEndpoint } from "../lib/push";
 
 // ─── SETTINGS ─────────────────────────────────────────────────────────────────
-const SettingsScreen = ({ user, settings, mode, onSaveSettings, onChangePassword, onLogout, onResetDemo }) => {
+const SettingsScreen = ({ user, settings, mode, pushApi, onSaveSettings, onChangePassword, onLogout, onResetDemo }) => {
   const [draft, setDraft] = useState(settings);
   const [saved, setSaved] = useState(false);
   const [tab, setTab] = useState("settings"); // "settings" | "mypass"
   const [myPw, setMyPw] = useState({ old: "", new1: "", new2: "", show: false, msg: "", err: "" });
 
   const isAdmin = user.role === "Director";
+  const [locating, setLocating] = useState(false);
+  const [locMsg, setLocMsg] = useState("");
+  const useMyLocation = async () => {
+    setLocating(true); setLocMsg("");
+    const p = await getPosition();
+    setLocating(false);
+    if (p.error) { setLocMsg(p.error); return; }
+    setDraft(d => ({ ...d, storeLat: Number(p.lat.toFixed(6)), storeLng: Number(p.lng.toFixed(6)) }));
+    setLocMsg(`✓ ${p.lat.toFixed(5)}, ${p.lng.toFixed(5)} (±${p.accuracy} м)`);
+  };
+
+  // Push notifications (this device)
+  const [pushOn, setPushOn] = useState(false);
+  const [pushMsg, setPushMsg] = useState("");
+  const [pushBusy, setPushBusy] = useState(false);
+  useEffect(() => { if (mode === "supabase" && pushSupported()) currentPushEndpoint().then(ep => pushApi.isSaved(ep).then(setPushOn)); }, [mode, pushApi]);
+  const togglePush = async () => {
+    setPushBusy(true); setPushMsg("");
+    try {
+      if (pushOn) {
+        const { endpoint } = await unsubscribeFromPush();
+        await pushApi.remove(endpoint); setPushOn(false);
+      } else {
+        const r = await subscribeToPush();
+        if (r.error) { setPushMsg(r.error); return; }
+        const s = await pushApi.save(r.subscription);
+        if (s.error) { setPushMsg(s.error); return; }
+        setPushOn(true);
+      }
+    } finally { setPushBusy(false); }
+  };
   const save = async () => { const r = await onSaveSettings(draft); if (r.error) return; setSaved(true); setTimeout(() => setSaved(false), 2000); };
 
   // Change own password
@@ -56,10 +89,39 @@ const SettingsScreen = ({ user, settings, mode, onSaveSettings, onChangePassword
               <Inp label={T.endTime} type="time" value={draft.workEnd} onChange={v => setDraft(d => ({ ...d, workEnd: v }))} />
             </div>
             <Inp label={T.overtimeThreshold} value={draft.overtime} onChange={v => setDraft(d => ({ ...d, overtime: v }))} />
+            <Inp label={T.lateGrace} type="number" value={draft.lateGraceMin ?? 10} onChange={v => setDraft(d => ({ ...d, lateGraceMin: v }))} />
+            <div style={{ color: S.textMuted, fontSize: 11, marginTop: -8 }}>{T.lateRuleHint}</div>
           </Card>
           <Card style={{ marginBottom: 14 }}>
             <div style={{ color: S.text, fontSize: 14, fontWeight: 700, marginBottom: 14 }}>{T.storeInfo}</div>
             <Inp label={T.storeName} value={draft.storeName} onChange={v => setDraft(d => ({ ...d, storeName: v }))} />
+          </Card>
+          {isAdmin && (
+            <Card style={{ marginBottom: 14 }}>
+              <div style={{ color: S.text, fontSize: 14, fontWeight: 700, marginBottom: 6 }}>{T.storeLocation}</div>
+              <div style={{ color: S.textMuted, fontSize: 11, marginBottom: 12 }}>{T.storeLocationHint}</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <Inp label={T.latitude} type="number" value={draft.storeLat ?? ""} onChange={v => setDraft(d => ({ ...d, storeLat: v === "" ? null : v }))} placeholder="47.9184" />
+                <Inp label={T.longitude} type="number" value={draft.storeLng ?? ""} onChange={v => setDraft(d => ({ ...d, storeLng: v === "" ? null : v }))} placeholder="106.9177" />
+              </div>
+              <Inp label={T.radius} type="number" value={draft.geoRadiusM ?? 150} onChange={v => setDraft(d => ({ ...d, geoRadiusM: v }))} />
+              <div style={{ display: "flex", gap: 8 }}>
+                <Btn full variant="secondary" onClick={useMyLocation} disabled={locating}>{locating ? T.locating : T.useMyLocation}</Btn>
+                {(draft.storeLat != null || draft.storeLng != null) && <Btn variant="secondary" onClick={() => { setDraft(d => ({ ...d, storeLat: null, storeLng: null })); setLocMsg(""); }}>{T.clearLocation}</Btn>}
+              </div>
+              {locMsg && <div style={{ color: locMsg.startsWith("✓") ? S.success : S.danger, fontSize: 12, marginTop: 8 }}>{locMsg}</div>}
+            </Card>
+          )}
+          <Card style={{ marginBottom: 14 }}>
+            <div style={{ color: S.text, fontSize: 14, fontWeight: 700, marginBottom: 6 }}>{T.pushTitle}</div>
+            <div style={{ color: S.textMuted, fontSize: 11, marginBottom: 12 }}>{T.pushHint}</div>
+            {mode !== "supabase" ? <div style={{ color: S.textMuted, fontSize: 12 }}>{T.pushDemoOnly}</div>
+              : !pushSupported() ? <div style={{ color: S.textMuted, fontSize: 12 }}>{T.pushUnsupported}</div>
+              : (<>
+                <div style={{ color: pushOn ? S.success : S.textMuted, fontSize: 12, fontWeight: 600, marginBottom: 10 }}>{pushOn ? T.pushOn : T.pushOff}</div>
+                <Btn full variant={pushOn ? "secondary" : "primary"} onClick={togglePush} disabled={pushBusy}>{pushOn ? T.pushDisable : T.pushEnable}</Btn>
+                {pushMsg && <div style={{ color: S.danger, fontSize: 12, marginTop: 8 }}>{pushMsg}</div>}
+              </>)}
           </Card>
           {saved && <div style={{ color: S.success, textAlign: "center", fontSize: 13, fontWeight: 600, padding: 8, background: S.successBg, borderRadius: 10, marginBottom: 10 }}>{T.settingsSaved}</div>}
           <Btn full onClick={save}>{T.saveSettings}</Btn>

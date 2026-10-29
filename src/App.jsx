@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import BottomNav from "./components/BottomNav";
 import TopBar from "./components/TopBar";
 import AttendanceScreen from "./screens/AttendanceScreen";
@@ -13,12 +13,26 @@ import TasksScreen from "./screens/TasksScreen";
 import { store, useStore } from "./store";
 import { T } from "./i18n";
 import { S } from "./theme";
+import { registerServiceWorker, showLocalNotification } from "./lib/push";
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
 export default function App() {
   const [screen, setScreen] = useState("home");
   const { ready, mode, error, user, employees, tasks, attendance, shifts, notifications, settings } = useStore();
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  // PWA: service worker for push + installability
+  useEffect(() => { registerServiceWorker(); }, []);
+
+  // When a new unread notification arrives while the app is open (realtime), surface it as a system notification.
+  const seen = useRef(null);
+  useEffect(() => {
+    const ids = new Set(notifications.map(n => n.id));
+    if (seen.current && user) {
+      notifications.filter(n => !n.read && !seen.current.has(n.id)).forEach(n => showLocalNotification(T.screenTitles.notifications, n.message, `notif-${n.id}`));
+    }
+    seen.current = ids;
+  }, [notifications, user]);
 
   if (!ready) {
     return (
@@ -37,12 +51,12 @@ export default function App() {
   const screens = {
     home: <Dashboard user={user} employees={employees} tasks={tasks} attendance={attendance} notifications={notifications} onNavigate={setScreen} />,
     employees: <EmployeesScreen employees={employees} user={user} api={store.employees} mode={mode} />,
-    attendance: <AttendanceScreen user={user} employees={employees} attendance={attendance} api={store.attendance} />,
+    attendance: <AttendanceScreen user={user} employees={employees} attendance={attendance} api={store.attendance} settings={settings} />,
     tasks: <TasksScreen tasks={tasks} employees={employees} user={user} api={store.tasks} />,
     schedule: <ScheduleScreen employees={employees} shifts={shifts} user={user} api={store.shifts} />,
-    reports: <ReportsScreen employees={employees} tasks={tasks} attendance={attendance} />,
+    reports: <ReportsScreen employees={employees} tasks={tasks} attendance={attendance} settings={settings} />,
     notifications: <NotificationsScreen notifications={notifications} api={store.notifications} />,
-    settings: <SettingsScreen user={user} settings={settings} mode={mode} onSaveSettings={store.settings.save} onChangePassword={store.changePassword} onLogout={async () => { await store.logout(); setScreen("home"); }} onResetDemo={store.resetDemo} />,
+    settings: <SettingsScreen user={user} settings={settings} mode={mode} pushApi={store.push} onSaveSettings={store.settings.save} onChangePassword={store.changePassword} onLogout={async () => { await store.logout(); setScreen("home"); }} onResetDemo={store.resetDemo} />,
   };
 
   return (

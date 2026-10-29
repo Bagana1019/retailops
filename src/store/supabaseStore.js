@@ -20,7 +20,7 @@ const toProfile = (p) => {
   if ("username" in p && p.username) row.username = p.username;
   return row;
 };
-const fromAttendance = (r) => ({ id: r.id, empId: r.emp_id, date: r.date, checkIn: hm(r.check_in), checkOut: hm(r.check_out), status: r.status });
+const fromAttendance = (r) => ({ id: r.id, empId: r.emp_id, date: r.date, checkIn: hm(r.check_in), checkOut: hm(r.check_out), status: r.status, distanceM: r.distance_m ?? null, locationOk: r.location_ok ?? null });
 const fromTask = (r) => ({ id: r.id, title: r.title, assignee: r.assignee, deadline: r.deadline ?? "", status: r.status, priority: r.priority, notes: r.notes ?? "" });
 const fromShift = (r) => ({ id: r.id, empId: r.emp_id, date: r.date, shift: r.shift, start: hm(r.start_time), end: hm(r.end_time), note: r.note ?? "" });
 const fromNotification = (r) => {
@@ -28,7 +28,7 @@ const fromNotification = (r) => {
   const sameDay = d.toDateString() === new Date().toDateString();
   return { id: r.id, type: r.type, message: r.message, read: r.read, time: sameDay ? d.toTimeString().slice(0, 5) : d.toLocaleDateString("mn-MN") };
 };
-const fromSettings = (r) => ({ workStart: hm(r.work_start), workEnd: hm(r.work_end), overtime: r.overtime, storeName: r.store_name });
+const fromSettings = (r) => ({ workStart: hm(r.work_start), workEnd: hm(r.work_end), overtime: r.overtime, storeName: r.store_name, lateGraceMin: r.late_grace_min ?? 10, storeLat: r.store_lat ?? null, storeLng: r.store_lng ?? null, geoRadiusM: r.geo_radius_m ?? 150 });
 
 const TABLES = {
   profiles: { key: "employees", map: fromProfile, order: "name" },
@@ -169,7 +169,10 @@ export function createSupabaseStore(client) {
     },
 
     attendance: {
-      async checkIn(rec) { const r = await call(() => client.from("attendance").insert({ emp_id: rec.empId, date: rec.date, check_in: rec.checkIn, status: rec.status })); if (!r.error) await loadTable("attendance"); return r; },
+      async checkIn(rec) {
+        const row = { emp_id: rec.empId, date: rec.date, check_in: rec.checkIn, status: rec.status, lat: rec.lat ?? null, lng: rec.lng ?? null, accuracy_m: rec.accuracyM ?? null, distance_m: rec.distanceM ?? null, location_ok: rec.locationOk ?? null };
+        const r = await call(() => client.from("attendance").insert(row)); if (!r.error) await loadTable("attendance"); return r;
+      },
       async checkOut(id, time) { const r = await call(() => client.from("attendance").update({ check_out: time }).eq("id", id)); if (!r.error) await loadTable("attendance"); return r; },
     },
 
@@ -194,8 +197,24 @@ export function createSupabaseStore(client) {
 
     settings: {
       async save(s) {
-        const r = await call(() => client.from("settings").update({ work_start: s.workStart, work_end: s.workEnd, overtime: Number(s.overtime) || 0, store_name: s.storeName }).eq("id", 1));
+        const num = (v) => (v === "" || v === null || v === undefined || Number.isNaN(Number(v)) ? null : Number(v));
+        const row = { work_start: s.workStart, work_end: s.workEnd, overtime: Number(s.overtime) || 0, store_name: s.storeName, late_grace_min: Math.max(0, Math.min(180, Number(s.lateGraceMin) || 0)), store_lat: num(s.storeLat), store_lng: num(s.storeLng), geo_radius_m: Math.max(20, Math.min(5000, Number(s.geoRadiusM) || 150)) };
+        const r = await call(() => client.from("settings").update(row).eq("id", 1));
         if (!r.error) await loadSettings(); return r;
+      },
+    },
+
+    // Web push subscriptions (one row per browser/device)
+    push: {
+      async save(sub) {
+        const u = em.get().user; if (!u || !sub?.endpoint) return { error: "no subscription" };
+        return call(() => client.from("push_subscriptions").upsert({ user_id: u.id, endpoint: sub.endpoint, p256dh: sub.keys?.p256dh, auth: sub.keys?.auth, user_agent: navigator.userAgent.slice(0, 200) }, { onConflict: "endpoint" }));
+      },
+      async remove(endpoint) { if (!endpoint) return {}; return call(() => client.from("push_subscriptions").delete().eq("endpoint", endpoint)); },
+      async isSaved(endpoint) {
+        if (!endpoint) return false;
+        const { data } = await client.from("push_subscriptions").select("id").eq("endpoint", endpoint).maybeSingle();
+        return Boolean(data);
       },
     },
 

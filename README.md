@@ -23,8 +23,10 @@ src/
   components/           Icon, TopBar, BottomNav, ui (Badge, Card, Inp, Btn ...)
   i18n.js  theme.js  data/mock.js  utils/date.js  lib/supabase.js
 supabase/
-  migrations/0001_init.sql   хүснэгт, trigger, RLS бодлого
+  migrations/                хүснэгт, trigger, RLS бодлого (дугаарын дарааллаар ажиллуулна)
   functions/admin/           Edge Function: хэрэглэгч үүсгэх / нууц үг шинэчлэх / устгах
+  functions/send-push/       Edge Function: Web Push илгээх (notifications insert webhook)
+public/                      manifest, service worker, icons (PWA)
 scripts/seed-demo.mjs        демо хэрэглэгч, өгөгдөл оруулах
 ```
 
@@ -47,11 +49,12 @@ scripts/seed-demo.mjs        демо хэрэглэгч, өгөгдөл ору�
 ```
 supabase login
 supabase link --project-ref <project-ref>
-supabase db push                     # supabase/migrations/0001_init.sql
+supabase db push                     # supabase/migrations/*.sql
 supabase functions deploy admin      # supabase/functions/admin
 ```
 
-CLI-гүй бол `supabase/migrations/0001_init.sql` файлын агуулгыг **SQL Editor**-т хуулж ажиллуулна.
+CLI-гүй бол `supabase/migrations/` доторх SQL файлуудыг дугаарын дарааллаар **SQL Editor**-т хуулж ажиллуулна.
+Шинэ migration нэмэгдэх бүрт (жишээ нь `0002_...`) зөвхөн тэр файлыг ажиллуулна.
 Edge Function-ийг Dashboard-ын **Edge Functions** хэсгээс `admin` нэртэйгээр үүсгэж, `index.ts`-ийн
 агуулгыг хуулна. Функц `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` гурван
 орчны хувьсагчийг Supabase автоматаар өгдөг тул нэмэлт тохиргоо хэрэггүй.
@@ -80,6 +83,44 @@ VITE_AUTH_EMAIL_DOMAIN=btech.local
 
 `anon` key-г browser-т оруулах нь зөв; `service_role` key-г **хэзээ ч** апп-д оруулж болохгүй.
 
+### 6. Push мэдэгдэл (заавал биш)
+
+Шинэ даалгавар, ээлж оноогдоход утсан дээр мэдэгдэл очно. Нэг удаа тохируулна:
+
+```
+npx web-push generate-vapid-keys
+```
+
+Гарсан **Public Key**-г `.env`-д `VITE_VAPID_PUBLIC_KEY=` гэж нэмнэ (Vercel дээр ч мөн адил, дараа нь redeploy).
+Private key-г Supabase-д нууц болгон өгч, функцийг deploy хийнэ:
+
+```
+npx supabase secrets set VAPID_PUBLIC_KEY=<public> VAPID_PRIVATE_KEY=<private> VAPID_SUBJECT=mailto:you@example.com
+npx supabase functions deploy send-push
+```
+
+Дараа нь Dashboard → **Database → Webhooks → Create a new hook**: нэр `send-push`, Table `notifications`,
+Events `Insert`, Type **Supabase Edge Functions** → `send-push` сонгоод Confirm. Энэ нь мэдэгдлийн мөр
+үүсэх бүрт функцийг дуудаж, тухайн ажилтны бүртгүүлсэн төхөөрөмжүүд рүү push илгээнэ.
+
+Ажилтан бүр өөрийн утсан дээр Тохиргоо → **Push мэдэгдэл → Мэдэгдэл асаах** дарж зөвшөөрнө.
+iPhone дээр эхлээд Safari-ийн Share → **Add to Home Screen** хийж апп-ыг суулгасан байх шаардлагатай (iOS 16.4+).
+Апп нээлттэй үед realtime-аар ирсэн мэдэгдэл push серверээс үл хамааран шууд харагдана.
+
+### 7. GPS баталгаажуулалт (заавал биш)
+
+Дээд Админ Тохиргоо → **Дэлгүүрийн байршил** хэсэгт дэлгүүрт байхдаа "Одоогийн байршлаа авах" дарж
+координатыг хадгална (эсвэл гараар бичнэ), зөвшөөрөх радиусыг метрээр заана (анхдагч 150 м).
+Үүний дараа ажилтан зөвхөн тэр радиусын дотор байж цаг тэмдэглэнэ; гадна байвал зай болон хэтэрсэн
+метрийг харуулж татгалзана. Бүртгэл бүрт зай хадгалагдаж, менежерийн ирцийн жагсаалт болон тайланд
+📍 тэмдэгтэй харагдана. Координатыг хоосон болговол шалгалт унтарна.
+
+## Тайлан экспорт
+
+Тайлан дэлгэц сар сонгож ажилтан тус бүрийн ирсэн өдөр, хоцролт, ажилласан цагийг нэгтгэнэ.
+**Excel (CSV)** нь UTF-8 BOM-той CSV татна (Excel дээр кирилл зөв харагдана). **PDF хэвлэх** нь
+browser-ийн хэвлэх цонх нээнэ, тэндээс "Save as PDF" сонгоно.
+
 ## Эрхийн загвар (RLS)
 
 | Хүснэгт | Ажилтан | Менежер | Дээд Админ |
@@ -90,6 +131,7 @@ VITE_AUTH_EMAIL_DOMAIN=btech.local
 | `shifts` | харах | бүгд | бүгд |
 | `notifications` | өөрийнх | өөрийнх | өөрийнх |
 | `settings` | харах | харах | засах |
+| `push_subscriptions` | өөрийнх | өөрийнх | өөрийнх |
 
 Хэрэглэгч үүсгэх, нууц үг шинэчлэх, устгах нь `service_role` эрх шаарддаг тул `admin` Edge Function-ээр
 хийгдэнэ. Функц дуудагчийн JWT-г шалгаж, Дээд Админ (Менежер зөвхөн Ажилтан эрхтэй хэрэглэгч үүсгэнэ)
