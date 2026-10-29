@@ -42,16 +42,16 @@ const must = async (label, q) => { const { error } = await q; if (error) { conso
 
 await must("tasks", sb.from("tasks").insert([
   { title: "3-р гарцын тавиурыг дүүргэх", assignee: ids.emp2, deadline: plus(1), status: "Хийгдэж байна", priority: "Өндөр", notes: "Ундааны хэсэгт анхаарлаа хандуулна уу", created_by: ids.manager },
-  { title: "Сарын тооллого хийх", assignee: ids.emp1, deadline: plus(4), status: "Хүлээгдэж байна", priority: "Өндөр", created_by: ids.manager },
+  { title: "Сарын тооллого хийх", assignee: ids.emp1, deadline: plus(4), status: "Хүлээгдэж байна", priority: "Өндөр", notes: "", created_by: ids.manager },
   { title: "Шинэ кассчинг сургах", assignee: ids.emp3, deadline: plus(2), status: "Дууссан", priority: "Дунд", notes: "POS системийн сургалт", created_by: ids.director },
   { title: "Үнийн шошго шинэчлэх", assignee: ids.emp3, deadline: plus(3), status: "Хийгдэж байна", priority: "Дунд", notes: "Шинэ урамшууллын бараанууд", created_by: ids.manager },
 ]));
 await must("shifts", sb.from("shifts").insert([
-  { emp_id: ids.emp1, date: plus(0), shift: "Өглөө", start_time: "08:00", end_time: "16:00" },
-  { emp_id: ids.emp2, date: plus(0), shift: "Өглөө", start_time: "08:00", end_time: "16:00" },
-  { emp_id: ids.emp3, date: plus(0), shift: "Орой", start_time: "14:00", end_time: "22:00" },
-  { emp_id: ids.emp1, date: plus(1), shift: "Өглөө", start_time: "08:00", end_time: "16:00" },
-  { emp_id: ids.emp2, date: plus(1), shift: "Орой", start_time: "14:00", end_time: "22:00" },
+  { emp_id: ids.emp1, date: plus(0), shift: "Өглөө", start_time: "08:00", end_time: "16:00", note: "" },
+  { emp_id: ids.emp2, date: plus(0), shift: "Өглөө", start_time: "08:00", end_time: "16:00", note: "" },
+  { emp_id: ids.emp3, date: plus(0), shift: "Орой", start_time: "14:00", end_time: "22:00", note: "" },
+  { emp_id: ids.emp1, date: plus(1), shift: "Өглөө", start_time: "08:00", end_time: "16:00", note: "" },
+  { emp_id: ids.emp2, date: plus(1), shift: "Орой", start_time: "14:00", end_time: "22:00", note: "" },
 ]));
 await must("attendance", sb.from("attendance").insert([
   { emp_id: ids.emp1, date: plus(-1), check_in: "08:00", check_out: "17:00", status: "Цагтаа" },
