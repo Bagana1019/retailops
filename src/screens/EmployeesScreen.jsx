@@ -38,7 +38,7 @@ const EmployeesScreen = ({ employees, user, api, mode }) => {
     if (!form.name || busy) return;
     const username = form.username.trim();
     if (username && employees.some(e => e.username === username && e.id !== editEmp?.id)) { setFormErr(T.usernameTaken); return; }
-    if (loginRequired && !editEmp && (!username || form.password.length < 4)) { setFormErr(T.loginRequiredForNew); return; }
+    if (loginRequired && !editEmp && (!username || form.password.length < 6)) { setFormErr(T.loginRequiredForNew); return; }
     const { password, ...rest } = form;
     const data = { ...rest, username };
     if (!canEditAccount) { delete data.role; delete data.username; }
@@ -57,7 +57,7 @@ const EmployeesScreen = ({ employees, user, api, mode }) => {
   const changeRole = (id, role) => { if (id === user.id) return; api.update(id, { role }); };
   const openReset = (emp) => { setResetTarget(emp); setResetPw(""); setResetMsg(""); };
   const doReset = async () => {
-    if (resetPw.length < 4) { setResetMsg("Хамгийн багадаа 4 тэмдэгт оруулна уу"); return; }
+    if (resetPw.length < 6) { setResetMsg("Хамгийн багадаа 6 тэмдэгт оруулна уу"); return; }
     const r = await api.resetPassword(resetTarget.id, resetPw);
     if (r.error) { setResetMsg(r.error); return; }
     setResetMsg("✓ Нууц үг шинэчлэгдлээ!");
@@ -127,7 +127,7 @@ const EmployeesScreen = ({ employees, user, api, mode }) => {
           <Card style={{ maxWidth: 320, width: "100%" }}>
             <div style={{ color: S.text, fontSize: 14, fontWeight: 700, marginBottom: 4 }}>🔑 {T.resetPassword}</div>
             <div style={{ color: S.textMuted, fontSize: 12, marginBottom: 14 }}>{resetTarget.name} (@{resetTarget.username})</div>
-            <Inp label="Шинэ нууц үг" value={resetPw} onChange={v => { setResetPw(v); setResetMsg(""); }} placeholder="Хамгийн багадаа 4 тэмдэгт" />
+            <Inp label="Шинэ нууц үг" value={resetPw} onChange={v => { setResetPw(v); setResetMsg(""); }} placeholder="Хамгийн багадаа 6 тэмдэгт" />
             {resetMsg && <div style={{ color: resetMsg.startsWith("✓") ? S.success : S.danger, fontSize: 12, marginBottom: 10, padding: "8px 12px", background: resetMsg.startsWith("✓") ? S.successBg : S.dangerBg, borderRadius: 8 }}>{resetMsg}</div>}
             <div style={{ display: "flex", gap: 8 }}>
               <Btn full onClick={doReset}>Шинэчлэх</Btn>

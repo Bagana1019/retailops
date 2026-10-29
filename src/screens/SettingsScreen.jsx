@@ -16,7 +16,7 @@ const SettingsScreen = ({ user, settings, mode, onSaveSettings, onChangePassword
 
   // Change own password
   const changeMyPw = async () => {
-    if (myPw.new1.length < 4) { setMyPw(p => ({ ...p, err: "Нууц үг хамгийн багадаа 4 тэмдэгт байна", msg: "" })); return; }
+    if (myPw.new1.length < 6) { setMyPw(p => ({ ...p, err: "Нууц үг хамгийн багадаа 6 тэмдэгт байна", msg: "" })); return; }
     if (myPw.new1 !== myPw.new2) { setMyPw(p => ({ ...p, err: "Шинэ нууц үг таарахгүй байна", msg: "" })); return; }
     const r = await onChangePassword(myPw.old, myPw.new1);
     if (r.error) { setMyPw(p => ({ ...p, err: r.error, msg: "" })); return; }

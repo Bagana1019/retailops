@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
       case "create_user": {
         const { email, password, profile } = body;
         if (!email || !password || !profile?.username || !profile?.name) return json({ error: "Дутуу мэдээлэл" }, 400);
-        if (password.length < 4) return json({ error: "Нууц үг хамгийн багадаа 4 тэмдэгт" }, 400);
+        if (password.length < 6) return json({ error: "Нууц үг хамгийн багадаа 6 тэмдэгт" }, 400);
         const role = isDirector ? (profile.role ?? "Employee") : "Employee";
         const { data, error } = await admin.auth.admin.createUser({
           email, password, email_confirm: true,
@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
       case "reset_password": {
         if (!isDirector) return json({ error: "Зөвхөн Дээд Админ" }, 403);
         const { userId, password } = body;
-        if (!userId || !password || password.length < 4) return json({ error: "Нууц үг хамгийн багадаа 4 тэмдэгт" }, 400);
+        if (!userId || !password || password.length < 6) return json({ error: "Нууц үг хамгийн багадаа 6 тэмдэгт" }, 400);
         const { error } = await admin.auth.admin.updateUserById(userId, { password });
         if (error) return json({ error: error.message }, 400);
         return json({ ok: true });

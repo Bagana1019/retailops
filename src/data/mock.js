@@ -1,11 +1,11 @@
 // ─── MOCK DATA ────────────────────────────────────────────────────────────────
 // Employees and login accounts are ONE list: an employee with a username can sign in with the given role.
 export const MOCK_EMPLOYEES = [
-  { id: 6, name: "Сараа Болд", phone: "+976-9900-1122", email: "saraa@store.mn", position: "Захирал", joined: "2020-01-15", active: true, username: "director", password: "1234", role: "Director" },
-  { id: 7, name: "Өмөр Халид", phone: "+976-9900-2233", email: "omar@store.mn", position: "Дэлгүүрийн менежер", joined: "2021-02-01", active: true, username: "manager", password: "1234", role: "Manager" },
-  { id: 1, name: "Лина Хасан", phone: "+976-9911-2233", email: "lina@store.mn", position: "Кассчин", joined: "2023-03-15", active: true, username: "emp1", password: "1234", role: "Employee" },
-  { id: 2, name: "Ахмед Насер", phone: "+976-9922-3344", email: "ahmed@store.mn", position: "Агуулахын ажилтан", joined: "2022-11-01", active: true, username: "emp2", password: "1234", role: "Employee" },
-  { id: 3, name: "Нур Ибрагим", phone: "+976-9933-4455", email: "nour@store.mn", position: "Борлуулагч", joined: "2024-01-20", active: true, username: "emp3", password: "1234", role: "Employee" },
+  { id: 6, name: "Сараа Болд", phone: "+976-9900-1122", email: "saraa@store.mn", position: "Захирал", joined: "2020-01-15", active: true, username: "director", password: "123456", role: "Director" },
+  { id: 7, name: "Өмөр Халид", phone: "+976-9900-2233", email: "omar@store.mn", position: "Дэлгүүрийн менежер", joined: "2021-02-01", active: true, username: "manager", password: "123456", role: "Manager" },
+  { id: 1, name: "Лина Хасан", phone: "+976-9911-2233", email: "lina@store.mn", position: "Кассчин", joined: "2023-03-15", active: true, username: "emp1", password: "123456", role: "Employee" },
+  { id: 2, name: "Ахмед Насер", phone: "+976-9922-3344", email: "ahmed@store.mn", position: "Агуулахын ажилтан", joined: "2022-11-01", active: true, username: "emp2", password: "123456", role: "Employee" },
+  { id: 3, name: "Нур Ибрагим", phone: "+976-9933-4455", email: "nour@store.mn", position: "Борлуулагч", joined: "2024-01-20", active: true, username: "emp3", password: "123456", role: "Employee" },
   { id: 4, name: "Халид Сауд", phone: "+976-9944-5566", email: "khalid@store.mn", position: "Ахлагч", joined: "2021-06-10", active: false, username: "", password: "", role: "Employee" },
   { id: 5, name: "Реем Отайби", phone: "+976-9955-6677", email: "reem@store.mn", position: "Кассчин", joined: "2023-08-05", active: true, username: "", password: "", role: "Employee" },
 ];

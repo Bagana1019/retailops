@@ -62,7 +62,7 @@ Edge Function-ийг Dashboard-ын **Edge Functions** хэсгээс `admin` н
 SUPABASE_URL=https://xxxx.supabase.co SUPABASE_SERVICE_ROLE_KEY=eyJ... node scripts/seed-demo.mjs
 ```
 
-`director/1234`, `manager/1234`, `emp1..3/1234` хэрэглэгчид болон жишээ даалгавар, ээлж, ирц үүснэ.
+`director/123456`, `manager/123456`, `emp1..3/123456` хэрэглэгчид болон жишээ даалгавар, ээлж, ирц үүснэ.
 Эхний Дээд Админ хэрэглэгчээ seed script-гүйгээр үүсгэх бол **Authentication → Users → Add user**
 дээр и-мэйл `director@btech.local`, нууц үг оруулаад, **User Metadata**-д
 `{"username":"director","name":"Сараа Болд","role":"Director"}` гэж бичнэ. Trigger автоматаар `profiles`
