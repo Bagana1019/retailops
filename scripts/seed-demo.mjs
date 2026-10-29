@@ -14,11 +14,11 @@ if (!url || !key) { console.error("Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KE
 const sb = createClient(url, key, { auth: { persistSession: false } });
 
 const PEOPLE = [
-  { username: "director", password: "1234", role: "Director", name: "Сараа Болд", phone: "+976-9900-1122", contact_email: "saraa@store.mn", position: "Захирал", joined: "2020-01-15" },
-  { username: "manager", password: "1234", role: "Manager", name: "Өмөр Халид", phone: "+976-9900-2233", contact_email: "omar@store.mn", position: "Дэлгүүрийн менежер", joined: "2021-02-01" },
-  { username: "emp1", password: "1234", role: "Employee", name: "Лина Хасан", phone: "+976-9911-2233", contact_email: "lina@store.mn", position: "Кассчин", joined: "2023-03-15" },
-  { username: "emp2", password: "1234", role: "Employee", name: "Ахмед Насер", phone: "+976-9922-3344", contact_email: "ahmed@store.mn", position: "Агуулахын ажилтан", joined: "2022-11-01" },
-  { username: "emp3", password: "1234", role: "Employee", name: "Нур Ибрагим", phone: "+976-9933-4455", contact_email: "nour@store.mn", position: "Борлуулагч", joined: "2024-01-20" },
+  { username: "director", password: "123456", role: "Director", name: "Сараа Болд", phone: "+976-9900-1122", contact_email: "saraa@store.mn", position: "Захирал", joined: "2020-01-15" },
+  { username: "manager", password: "123456", role: "Manager", name: "Өмөр Халид", phone: "+976-9900-2233", contact_email: "omar@store.mn", position: "Дэлгүүрийн менежер", joined: "2021-02-01" },
+  { username: "emp1", password: "123456", role: "Employee", name: "Лина Хасан", phone: "+976-9911-2233", contact_email: "lina@store.mn", position: "Кассчин", joined: "2023-03-15" },
+  { username: "emp2", password: "123456", role: "Employee", name: "Ахмед Насер", phone: "+976-9922-3344", contact_email: "ahmed@store.mn", position: "Агуулахын ажилтан", joined: "2022-11-01" },
+  { username: "emp3", password: "123456", role: "Employee", name: "Нур Ибрагим", phone: "+976-9933-4455", contact_email: "nour@store.mn", position: "Борлуулагч", joined: "2024-01-20" },
 ];
 
 const today = new Date();
@@ -58,4 +58,4 @@ await must("attendance", sb.from("attendance").insert([
   { emp_id: ids.emp2, date: plus(-1), check_in: "08:05", check_out: "17:00", status: "Цагтаа" },
   { emp_id: ids.emp3, date: plus(-1), check_in: "08:20", check_out: "17:10", status: "Хоцорсон" },
 ]));
-console.log("\nDone. Sign in with director/1234, manager/1234 or emp1/1234.");
+console.log("\nDone. Sign in with director/123456, manager/123456 or emp1/123456.");

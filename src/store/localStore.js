@@ -5,7 +5,7 @@ import { MOCK_EMPLOYEES, MOCK_ATTENDANCE, MOCK_TASKS, MOCK_SHIFTS, MOCK_NOTIFICA
 import { T } from "../i18n";
 
 // Bump the version whenever the stored data shape changes so stale data is ignored.
-const PREFIX = "btech:v3:";
+const PREFIX = "btech:v4:";
 const load = (key, fallback) => {
   try { const raw = localStorage.getItem(PREFIX + key); return raw === null ? fallback : JSON.parse(raw); }
   catch { return fallback; }
